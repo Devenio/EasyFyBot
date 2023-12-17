@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 import mongoose from 'mongoose';
 import { DATABASE_MODELS } from "../utils/constant";
-import { UserSchema } from "./schema/User";
+import { UserSchema } from "./schemas/User";
 
 config();
 
