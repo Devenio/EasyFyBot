@@ -4,7 +4,11 @@ import { startDatabase } from "./database";
 config();
 
 async function bootstrap() {
-    startDatabase();
+    console.log("Bot Starting...");
+
+    await startDatabase();
+
+    console.log("\nBot Started :)");
 }
 
 bootstrap();

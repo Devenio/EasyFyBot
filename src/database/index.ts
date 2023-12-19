@@ -7,21 +7,21 @@ import { BotSchema } from "./schemas/Bot";
 
 config();
 
-export function startDatabase() {
-    const { DB_USERNAME, DB_PASSWORD, DB_NAME } = process.env;
+export async function startDatabase() {
+    const { DB_USERNAME, DB_PASSWORD, DB_NAME, DB_URL } = process.env;
 
-    mongoose
-        .connect(
-            `mongodb://${DB_USERNAME}:${DB_PASSWORD}@127.0.0.1:27017/${DB_NAME}?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin`
-        )
-        .then(() => {
-            console.log("Connected to Database ✅");
-            setModels();
-        })
-        .catch((err) => {
-            console.log("Unable to connect to Database ❌");
-            console.log("Error: ", err);
-        });
+    try {
+        await mongoose.connect(
+            DB_URL ||
+                `mongodb://${DB_USERNAME}:${DB_PASSWORD}@127.0.0.1:27017/${DB_NAME}?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin`
+        );
+
+        console.log("Connected to Database ✅");
+        setModels();
+    } catch (error) {
+        console.log("Unable to connect to Database ❌");
+        console.log("Error: ", error);
+    }
 }
 
 function setModels() {

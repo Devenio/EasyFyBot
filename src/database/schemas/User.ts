@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 
-const BotModel = mongoose.model(DATABASE_MODELS.BOT);
+const BotModel = mongoose.models[DATABASE_MODELS.BOT];
 
 export const UserSchema = new mongoose.Schema({
     chat_id: { type: Number, required: true },
