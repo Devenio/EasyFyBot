@@ -5,7 +5,7 @@ export class UserService {
     private userRepository;
 
     constructor() {
-        this.userRepository = mongoose.models[DATABASE_MODELS.USER];
+        this.userRepository = mongoose.model(DATABASE_MODELS.USER);
     }
 
     async findOneById(chatId: number) {

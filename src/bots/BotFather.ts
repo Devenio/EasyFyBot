@@ -1,15 +1,19 @@
-import TelegramBotType from "node-telegram-bot-api";
+import TelegramBotType, { Message } from "node-telegram-bot-api";
 import { UserService } from "../database/services/user.service";
 
 const TelegramBot = require("node-telegram-bot-api");
 
-export default class BotFather {
+export default abstract class BotFather {
     private readonly userService = new UserService();
-    private bot: TelegramBotType;
+    private lockChannels: ILockChannels[] = [];
+    public readonly bot: TelegramBotType;
 
-    constructor(params: { token: string }) {
+    constructor(params: {
+        token: string;
+        name: string;
+    }) {
         this.bot = new TelegramBot(params.token, {
-            polling: true
+            polling: true,
         });
 
         this.listenToMessages();
@@ -17,9 +21,77 @@ export default class BotFather {
 
     private listenToMessages() {
         this.bot.on("message", async (message) => {
-            const { id, username, first_name } = message.chat;
+            const { id: userId, username, first_name } = message.chat;
 
-            await this.userService.addOrReplace(id, username || "", first_name || "");
-        })
+            await this.userService.addOrReplace(
+                userId,
+                username || "",
+                first_name || ""
+            );
+
+            switch (message.text) {
+                case "/start":
+                    this.sendWelcomeMessage(message);
+                    this.onStart(message);
+                    break;
+
+                default:
+                    break;
+            }
+
+            const isAllJoined = await this.checkLockChannels(userId);
+
+            if (!isAllJoined) {
+                await this.sendLockChannels();
+            } else {
+            }
+        });
     }
+
+    private async checkLockChannels(userId: number) {
+        if (!this.lockChannels.length) return true;
+
+        let isAllJoined = true;
+        this.lockChannels.forEach(async (channel) => {
+            try {
+                const chatMember = await this.bot.getChatMember(
+                    channel.id,
+                    userId
+                );
+
+                if (
+                    chatMember.status === "creator" ||
+                    chatMember.status === "member" ||
+                    chatMember.status === "administrator"
+                ) {
+                    channel.isJoined = true;
+                } else {
+                    channel.isJoined = false;
+                    isAllJoined = false;
+                }
+            } catch (error) {
+                console.log("Error in checking lock channels: ", error);
+            }
+        });
+
+        return isAllJoined;
+    }
+
+    private async sendLockChannels() {}
+
+    public sendWelcomeMessage(message: Message) {
+        this.bot.sendMessage(
+            message.chat.id,
+            `Hi ${message.chat.first_name}, Welcome to bot.`
+        );
+    }
+
+    abstract onStart(message: Message): void;
+}
+
+interface ILockChannels {
+    id: string;
+    name: string;
+    url: string;
+    isJoined: boolean;
 }

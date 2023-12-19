@@ -1,3 +1,5 @@
 export const enum DATABASE_MODELS {
-    USER = "user"
+    USER = "User",
+    CHANNEL = "Channel",
+    BOT = "Bot"
 }
