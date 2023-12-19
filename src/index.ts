@@ -4,7 +4,7 @@ import { startDatabase } from "./database";
 config();
 
 async function bootstrap() {
-    console.log("Bot Starting...");
+    console.log("Bot Starting...\n");
 
     await startDatabase();
 

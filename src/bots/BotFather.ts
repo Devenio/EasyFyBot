@@ -1,22 +1,33 @@
 import TelegramBotType, { Message } from "node-telegram-bot-api";
 import { UserService } from "../database/services/user.service";
+import { BotService } from "../database/services/bot.service";
 
 const TelegramBot = require("node-telegram-bot-api");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
+    private readonly botService = new BotService();
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
 
-    constructor(params: {
-        token: string;
-        name: string;
-    }) {
+    constructor(params: { token: string; name: string }) {
         this.bot = new TelegramBot(params.token, {
             polling: true,
         });
 
+        this.addBotToDatabase(params.name, params.token);
         this.listenToMessages();
+    }
+
+    private addBotToDatabase(name: string, token: string) {
+        const response = this.botService.findOne({ token });
+
+        if (!response) {
+            this.botService.create({
+                name,
+                token,
+            });
+        }
     }
 
     private listenToMessages() {

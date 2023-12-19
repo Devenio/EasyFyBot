@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { InferSchemaType } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 
 const BotModel = mongoose.models[DATABASE_MODELS.BOT];
@@ -18,3 +18,5 @@ export const ChannelSchema = new mongoose.Schema({
         default: [],
     },
 });
+
+export type ChannelSchemaType = InferSchemaType<typeof ChannelSchema>;

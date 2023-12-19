@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { InferSchemaType } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 
 const BotModel = mongoose.models[DATABASE_MODELS.BOT];
@@ -7,9 +7,9 @@ export const UserSchema = new mongoose.Schema({
     chat_id: { type: Number, required: true },
     user_name: { type: String, required: false },
     first_name: { type: String, required: true },
-    ban: { type: Boolean, required: true },
-    created_date: { type: Date, default: Date.now },
-    is_super_admin: { type: Boolean, default: false },
+    ban: { type: Boolean, default: false, required: false },
+    created_date: { type: Date, default: Date.now, required: false },
+    is_super_admin: { type: Boolean, default: false, required: false },
     admin_bot_ids: {
         type: [
             {
@@ -18,5 +18,8 @@ export const UserSchema = new mongoose.Schema({
             },
         ],
         default: [],
+        required: false
     },
 });
+
+export type UserSchemaType = InferSchemaType<typeof UserSchema>;

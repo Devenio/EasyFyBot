@@ -20,6 +20,6 @@ export class PikaSpotify extends BotFather {
     }
 
     onStart(message: Message): void {
-
+        return;
     }
 }
