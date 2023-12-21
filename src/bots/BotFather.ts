@@ -1,16 +1,29 @@
-import TelegramBotType, { Message } from "node-telegram-bot-api";
+import TelegramBotType, {
+    Message,
+    ReplyKeyboardMarkup,
+} from "node-telegram-bot-api";
 import { UserService } from "../database/services/user.service";
 import { BotService } from "../database/services/bot.service";
+import { ADMIN_KEYBOARDS } from "../utils/constant";
 
 const TelegramBot = require("node-telegram-bot-api");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly botService = new BotService();
+
+    private readonly token: string = "";
+    private readonly welcomeMessage = "Welcome to bot";
+
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
 
-    constructor(params: { token: string; name: string }) {
+    constructor(params: {
+        token: string;
+        name: string;
+        welcomeMessage?: string;
+    }) {
+        this.token = params.token;
         this.bot = new TelegramBot(params.token, {
             polling: true,
         });
@@ -37,14 +50,17 @@ export default abstract class BotFather {
             await this.userService.addOrReplace(
                 userId,
                 username || "",
-                first_name || ""
+                first_name || "",
+                this.token
             );
 
             switch (message.text) {
-                case "/start":
-                    this.sendWelcomeMessage(message);
+                case "/start": {
+                    const replyMarkups = await this.getReplyMarkups(message);
+                    this.sendWelcomeMessage(message, replyMarkups);
                     this.onStart(message);
                     break;
+                }
 
                 default:
                     break;
@@ -114,14 +130,32 @@ export default abstract class BotFather {
         }
     }
 
-    public sendWelcomeMessage(message: Message) {
-        this.bot.sendMessage(
+    private async getReplyMarkups(message: Message) {
+        const isAdmin = await this.userService.isAdmin(
             message.chat.id,
-            `Hi ${message.chat.first_name}, Welcome to bot.`
+            this.token
         );
+
+        const replyMarkup: ReplyKeyboardMarkup = {
+            resize_keyboard: true,
+            keyboard: [],
+        };
+
+        if (isAdmin) {
+            replyMarkup.keyboard.push(
+                [{ text: ADMIN_KEYBOARDS.SERVER_STATUS }],
+                [{ text: ADMIN_KEYBOARDS.BOT_STATISTICS }]
+            );
+        }
+
+        return replyMarkup;
     }
 
     abstract onStart(message: Message): void;
+    abstract sendWelcomeMessage(
+        message: Message,
+        replayMarkups: ReplyKeyboardMarkup
+    ): void;
 }
 
 interface ILockChannels {

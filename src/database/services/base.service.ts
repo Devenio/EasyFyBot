@@ -1,4 +1,4 @@
-import mongoose, { FilterQuery, Model, Schema } from "mongoose";
+import mongoose, { Document, FilterQuery, Model, Require_id, Schema } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 
 export abstract class BaseService<SCHEMA_TYPE> {

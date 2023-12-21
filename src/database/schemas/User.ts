@@ -18,8 +18,8 @@ export const UserSchema = new mongoose.Schema({
             },
         ],
         default: [],
-        required: false
-    },
+        required: false,
+    }
 });
 
 export type UserSchemaType = InferSchemaType<typeof UserSchema>;

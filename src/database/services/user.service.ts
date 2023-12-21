@@ -13,15 +13,17 @@ export class UserService extends BaseService<UserSchemaType> {
         });
     }
 
-    async addOrReplace(chatId: number, username: string, firstName: string) {
+    async addOrReplace(chatId: number, username: string, firstName: string, botToken: string) {
         const user = await this.findOne({ chat_id: chatId });
 
         if (!user) {
-            await this.create({
+            const createdUser = await this.create({
                 chat_id: chatId,
                 user_name: username,
                 first_name: firstName,
             });
+
+            await this.botService.addUser(botToken, createdUser?._id as string)
         } else {
             await user.set({
                 user_name: username,

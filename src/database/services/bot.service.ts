@@ -9,4 +9,26 @@ export class BotService extends BaseService<BotSchemaType> {
             schema: BotSchema,
         });
     }
+
+    async addUser(botToken: string, userId: string) {
+        try {
+            const bot = await this.findOne({ token: botToken })
+
+            const response = await this.collection.findByIdAndUpdate(
+                bot?._id,
+                {
+                    $push: {
+                        users: userId,
+                    },
+                },
+                {
+                    new: true,
+                    useFindAndModify: false,
+                }
+            );
+            return response;
+        } catch (error) {
+            console.error("Unable to find: ", error);
+        }
+    }
 }
