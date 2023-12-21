@@ -1,3 +1,4 @@
+// TODO: add services to an index for importing
 import TelegramBotType, {
     CallbackQuery,
     Message,
@@ -68,19 +69,12 @@ export default abstract class BotFather {
         })) as ILockChannels[];
     }
 
-    // Events 
+    // Events
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
-
+        // TODO: rename message
         switch (message.text) {
             case "/start": {
-                await this.userService.addOrReplace(
-                    chatId,
-                    username || "",
-                    first_name || "",
-                    this.token
-                );
-
                 const replyMarkups = await this.getStartReplyMarkups(message);
                 this.sendWelcomeMessage(message, replyMarkups);
                 this.onStart(message);
@@ -90,6 +84,13 @@ export default abstract class BotFather {
             default:
                 break;
         }
+
+        await this.userService.addOrReplace(
+            chatId,
+            username || "",
+            first_name || "",
+            this.token
+        );
 
         const notJoinedChannels = await this.checkLockedChannels(chatId);
         if (notJoinedChannels.length) {
@@ -103,7 +104,9 @@ export default abstract class BotFather {
 
         switch (callbackQuery.data) {
             case CALLBACK_QUERY.JOINED_CHANNELS:
-                const notJoinedChannels = await this.checkLockedChannels(chatId);
+                const notJoinedChannels = await this.checkLockedChannels(
+                    chatId
+                );
 
                 if (!notJoinedChannels.length) {
                     this.bot.deleteMessage(
@@ -156,9 +159,7 @@ export default abstract class BotFather {
             }
         });
 
-        return channels.filter(
-            (channel) => !channel.isJoined
-        );
+        return channels.filter((channel) => !channel.isJoined);
     }
 
     private async sendLockChannels(

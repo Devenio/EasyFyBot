@@ -64,7 +64,7 @@ export class Keyboard {
 
             this.setNewKeyboard(button.text, (message) => {
                 if (button.callback) {
-                    button.callback(message, this.bot);
+                    button.callback(message);
                 }
                 if (button.callbackMessage) {
                     this.onKeyboardDefaultCallback(
@@ -102,24 +102,24 @@ export class Keyboard {
     }
 
     // Keyboard callbacks
-    private async onBotStatistics(message: Message, bot: TelegramBotType) {
+    private async onBotStatistics(message: Message) {
         const countAll = await this.userService.count();
         const countBannedUsers = await this.userService.count({
             is_ban: true,
         });
 
-        bot.sendMessage(
+        this.bot.sendMessage(
             message.chat.id,
             `👤 تعداد کاربران : ${countAll} \n 🔞 تعداد کاربران بن شده : ${countBannedUsers}`
         );
     }
 
-    private async onServerStatus(message: Message, bot: TelegramBotType) {
+    private async onServerStatus(message: Message) {
         const cpu = osu.cpu;
 
         const info = await cpu.usage();
 
-        bot.sendMessage(
+        this.bot.sendMessage(
             message.chat.id,
             ` 🗂 RAM : ${(
                 os.totalmem() / 1024 / 1024 / 1024 -
@@ -159,6 +159,6 @@ interface IBotKeyboardButtons extends KeyboardButton {
     text: ADMIN_KEYBOARDS;
     isAdminButton?: boolean;
     callbackMessage?: string;
-    callback?: (message: Message, bot: TelegramBotType) => void;
+    callback?: (message: Message) => void;
     children?: IBotKeyboardButtons[][];
 }
