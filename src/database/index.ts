@@ -19,8 +19,8 @@ export async function startDatabase() {
         console.log("Connected to Database ✅");
         setModels();
     } catch (error) {
-        console.log("Unable to connect to Database ❌");
-        console.log("Error: ", error);
+        console.error("Unable to connect to Database ❌");
+        console.error("Error: ", error);
     }
 }
 

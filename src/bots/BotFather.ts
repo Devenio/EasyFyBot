@@ -19,8 +19,8 @@ export default abstract class BotFather {
         this.listenToMessages();
     }
 
-    private addBotToDatabase(name: string, token: string) {
-        const response = this.botService.findOne({ token });
+    private async addBotToDatabase(name: string, token: string) {
+        const response = await this.botService.findOne({ token });
 
         if (!response) {
             this.botService.create({
@@ -53,7 +53,7 @@ export default abstract class BotFather {
             const isAllJoined = await this.checkLockChannels(userId);
 
             if (!isAllJoined) {
-                await this.sendLockChannels();
+                await this.sendLockChannels(userId);
             } else {
             }
         });
@@ -81,14 +81,38 @@ export default abstract class BotFather {
                     isAllJoined = false;
                 }
             } catch (error) {
-                console.log("Error in checking lock channels: ", error);
+                console.error("Error in checking lock channels: ", error);
             }
         });
 
         return isAllJoined;
     }
 
-    private async sendLockChannels() {}
+    private async sendLockChannels(userId: number) {
+        const channelsToJoin = this.lockChannels
+            .filter((channel) => !channel.isJoined)
+            .map((channel) => `${channel.name}: ${channel.url}`);
+
+        if (channelsToJoin.length > 0) {
+            const joinMessage = `To use this bot, please join the following channels 🫠:`;
+
+            this.bot.sendMessage(userId, joinMessage, {
+                reply_markup: {
+                    inline_keyboard: [
+                        ...this.lockChannels.map((channel) => {
+                            return [{ text: channel.name, url: channel.url }];
+                        }),
+                        [
+                            {
+                                text: "I have joined ✅",
+                                callback_data: `join`,
+                            },
+                        ],
+                    ],
+                },
+            });
+        }
+    }
 
     public sendWelcomeMessage(message: Message) {
         this.bot.sendMessage(

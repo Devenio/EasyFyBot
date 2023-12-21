@@ -10,25 +10,34 @@ export abstract class BaseService<SCHEMA_TYPE> {
         this.collection = mongoose.models[data.modelName];
     }
 
+    async find(options: FilterQuery<SCHEMA_TYPE>) {
+        try {
+            const response = await this.collection.find(options);
+            return response;
+        } catch (error) {
+            console.error("Unable to find: ", error);
+        }
+    }
+
     async findOne(options: FilterQuery<SCHEMA_TYPE>) {
         try {
             const response = await this.collection.findOne(options);
             return response;
         } catch (error) {
-            console.log("Unable to find: ", error);
+            console.error("Unable to find: ", error);
         }
     }
 
     async create(options: SCHEMA_TYPE) {
         try {
             const newDocument = new this.collection({
-                options,
-            });
+                ...options,
+            })
 
             const response = await newDocument.save();
             return response;
         } catch (err) {
-            console.log("Error in Create: ", err);
+            console.error("Error in Create: ", err);
         }
     }
 }

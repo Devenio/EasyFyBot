@@ -5,18 +5,20 @@ import { Message } from "node-telegram-bot-api";
 config();
 
 export class PikaSpotify extends BotFather {
-    constructor() {
+    constructor(data: {
+        token: string
+    }) {
         super({
-            token: process.env.BOT_TOKEN_SPOTIFY || "",
-            name: "PikaSpotify"
-        })
+            token: data.token,
+            name: "PikaSpotify",
+        });
     }
 
     sendWelcomeMessage(message: Message): void {
         this.bot.sendMessage(
             message.chat.id,
-            `Hi ${message.chat.first_name}, Welcome to bot.`
-        );    
+            `Hi ${message.chat.first_name} To download from Spotify, send the track link, album or playlist 🟢.`
+        );
     }
 
     onStart(message: Message): void {
