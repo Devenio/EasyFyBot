@@ -6,12 +6,14 @@ import TelegramBotType, {
 import { UserService } from "../../database/services/user.service";
 import { BotService } from "../../database/services/bot.service";
 import { ADMIN_KEYBOARDS } from "../../utils/constant";
+import { Keyboard } from "./Keyboard";
 
 const TelegramBot = require("node-telegram-bot-api");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly botService = new BotService();
+    private readonly botKeyboards;
 
     private readonly token: string = "";
 
@@ -26,6 +28,9 @@ export default abstract class BotFather {
         this.bot = new TelegramBot(params.token, {
             polling: true,
         });
+        this.botKeyboards = new Keyboard({
+            bot: this.bot
+        })
 
         this.addBotToDatabase(params.name, params.token);
 
@@ -64,26 +69,6 @@ export default abstract class BotFather {
                 break;
             }
 
-            case ADMIN_KEYBOARDS.MANAGEMENT: {
-                this.bot.sendMessage(chatId, "به پنل ادمین خوش اومدی.", {
-                    reply_markup: {
-                        resize_keyboard: true,
-                        keyboard: [
-                            [{ text: ADMIN_KEYBOARDS.SERVER_STATUS }],
-                            [{ text: ADMIN_KEYBOARDS.BOT_STATISTICS }],
-                        ]
-                    }
-                })
-                break;
-            }
-
-            case ADMIN_KEYBOARDS.BOT_STATISTICS: {
-                break;
-            }
-
-            case ADMIN_KEYBOARDS.SERVER_STATUS: {
-                break;
-            }
             default:
                 break;
         }
@@ -157,6 +142,8 @@ export default abstract class BotFather {
             message.chat.id,
             this.token
         );
+
+        this.botKeyboards.setupKeyboard(!!isAdmin); 
 
         const replyMarkup: ReplyKeyboardMarkup = {
             resize_keyboard: true,
