@@ -5,14 +5,17 @@ import TelegramBotType, {
 } from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
 import { BotService } from "../../database/services/bot.service";
-import { ADMIN_KEYBOARDS } from "../../utils/constant";
+import { ADMIN_KEYBOARDS, CALLBACK_QUERY } from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
+import { ChannelService } from "../../database/services/channel.service";
+import { ChannelSchemaType } from "../../database/schemas/Channel";
 
 const TelegramBot = require("node-telegram-bot-api");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly botService = new BotService();
+    private readonly channelService = new ChannelService();
     private readonly botKeyboards;
 
     private readonly token: string = "";
@@ -20,19 +23,17 @@ export default abstract class BotFather {
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
 
-    constructor(params: {
-        token: string;
-        name: string;
-    }) {
+    constructor(params: { token: string; name: string }) {
         this.token = params.token;
         this.bot = new TelegramBot(params.token, {
             polling: true,
         });
         this.botKeyboards = new Keyboard({
-            bot: this.bot
-        })
+            bot: this.bot,
+        });
 
         this.addBotToDatabase(params.name, params.token);
+        this.setLockChannels(params.token);
 
         this.bot.on("text", (message) => this.onText(message));
         this.bot.on("callback_query", (callbackQuery) =>
@@ -49,6 +50,22 @@ export default abstract class BotFather {
                 token,
             });
         }
+    }
+
+    private async setLockChannels(token: string) {
+        const bot = await this.botService.findOne({ token });
+        const channels = await this.channelService.find({
+            bot_to_lock_ids: { $in: [bot?._id] },
+        });
+
+        if (!channels) this.lockChannels = [];
+
+        this.lockChannels = channels?.map(({ channel_id, name, url }) => ({
+            id: channel_id,
+            name,
+            url,
+            isJoined: false,
+        })) as ILockChannels[];
     }
 
     private async onText(message: Message) {
@@ -73,24 +90,54 @@ export default abstract class BotFather {
                 break;
         }
 
-        const isAllJoined = await this.checkLockChannels(chatId);
-        if (!isAllJoined) {
-            await this.sendLockChannels(chatId);
-        } else {
+        const notJoinedChannels = await this.checkLockedChannels(chatId);
+        if (notJoinedChannels.length) {
+            await this.sendLockChannels(chatId, notJoinedChannels);
         }
     }
 
-    private async onCallbackQuery(callbackQuery: CallbackQuery) {}
+    private async onCallbackQuery(callbackQuery: CallbackQuery) {
+        if (!callbackQuery.message) return;
+        const chatId = callbackQuery.message?.chat.id;
 
-    private async checkLockChannels(userId: number) {
-        if (!this.lockChannels.length) return true;
+        switch (callbackQuery.data) {
+            case CALLBACK_QUERY.JOINED_CHANNELS:
+                const notJoinedChannels = await this.checkLockedChannels(chatId);
 
-        let isAllJoined = true;
-        this.lockChannels.forEach(async (channel) => {
+                if (!notJoinedChannels.length) {
+                    this.bot.deleteMessage(
+                        chatId,
+                        callbackQuery.message.message_id
+                    );
+                    this.bot.answerCallbackQuery(callbackQuery.id, {
+                        text: "ممنون بابت عضو شدن!",
+                    });
+
+                    this.bot.sendMessage(
+                        chatId,
+                        "حالا لینک پستی که میخوای دانلود کنی رو بفرست 📌"
+                    );
+                } else {
+                    this.bot.answerCallbackQuery(callbackQuery.id, {
+                        text: "هنوز که عضو نشدی🫠",
+                    });
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private async checkLockedChannels(chatId: number) {
+        if (!this.lockChannels.length) return [];
+
+        const channels = [...this.lockChannels];
+        channels.forEach(async (channel) => {
             try {
                 const chatMember = await this.bot.getChatMember(
                     channel.id,
-                    userId
+                    chatId
                 );
 
                 if (
@@ -101,40 +148,38 @@ export default abstract class BotFather {
                     channel.isJoined = true;
                 } else {
                     channel.isJoined = false;
-                    isAllJoined = false;
                 }
             } catch (error) {
                 console.error("Error in checking lock channels: ", error);
             }
         });
 
-        return isAllJoined;
+        return channels.filter(
+            (channel) => !channel.isJoined
+        );
     }
 
-    private async sendLockChannels(userId: number) {
-        const channelsToJoin = this.lockChannels
-            .filter((channel) => !channel.isJoined)
-            .map((channel) => `${channel.name}: ${channel.url}`);
+    private async sendLockChannels(
+        userId: number,
+        notJoinedChannels: ILockChannels[]
+    ) {
+        const joinMessage = `To use this bot, please join the following channels 🫠:`;
 
-        if (channelsToJoin.length > 0) {
-            const joinMessage = `To use this bot, please join the following channels 🫠:`;
-
-            this.bot.sendMessage(userId, joinMessage, {
-                reply_markup: {
-                    inline_keyboard: [
-                        ...this.lockChannels.map((channel) => {
-                            return [{ text: channel.name, url: channel.url }];
-                        }),
-                        [
-                            {
-                                text: "I have joined ✅",
-                                callback_data: `join`,
-                            },
-                        ],
+        this.bot.sendMessage(userId, joinMessage, {
+            reply_markup: {
+                inline_keyboard: [
+                    ...notJoinedChannels.map((channel) => {
+                        return [{ text: channel.name, url: channel.url }];
+                    }),
+                    [
+                        {
+                            text: "I have joined ✅",
+                            callback_data: CALLBACK_QUERY.JOINED_CHANNELS,
+                        },
                     ],
-                },
-            });
-        }
+                ],
+            },
+        });
     }
 
     private async getStartReplyMarkups(message: Message) {
@@ -143,7 +188,7 @@ export default abstract class BotFather {
             this.token
         );
 
-        this.botKeyboards.setupKeyboard(!!isAdmin); 
+        this.botKeyboards.setupKeyboard(!!isAdmin);
 
         const replyMarkup: ReplyKeyboardMarkup = {
             resize_keyboard: true,

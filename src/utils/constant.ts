@@ -10,3 +10,7 @@ export const enum ADMIN_KEYBOARDS {
     BOT_STATISTICS = "آمار ربات 📈",
     EXIT_ADMIN_PANEL = "خروج از پنل ❌",
 }
+
+export const enum CALLBACK_QUERY {
+    JOINED_CHANNELS = "JOINED_CHANNELS"
+}
