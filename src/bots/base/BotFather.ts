@@ -1,10 +1,11 @@
 import TelegramBotType, {
+    CallbackQuery,
     Message,
     ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
-import { UserService } from "../database/services/user.service";
-import { BotService } from "../database/services/bot.service";
-import { ADMIN_KEYBOARDS } from "../utils/constant";
+import { UserService } from "../../database/services/user.service";
+import { BotService } from "../../database/services/bot.service";
+import { ADMIN_KEYBOARDS } from "../../utils/constant";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -13,7 +14,6 @@ export default abstract class BotFather {
     private readonly botService = new BotService();
 
     private readonly token: string = "";
-    private readonly welcomeMessage = "Welcome to bot";
 
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
@@ -21,7 +21,6 @@ export default abstract class BotFather {
     constructor(params: {
         token: string;
         name: string;
-        welcomeMessage?: string;
     }) {
         this.token = params.token;
         this.bot = new TelegramBot(params.token, {
@@ -29,7 +28,11 @@ export default abstract class BotFather {
         });
 
         this.addBotToDatabase(params.name, params.token);
-        this.listenToMessages();
+
+        this.bot.on("text", (message) => this.onText(message));
+        this.bot.on("callback_query", (callbackQuery) =>
+            this.onCallbackQuery(callbackQuery)
+        );
     }
 
     private async addBotToDatabase(name: string, token: string) {
@@ -43,37 +46,56 @@ export default abstract class BotFather {
         }
     }
 
-    private listenToMessages() {
-        this.bot.on("message", async (message) => {
-            const { id: userId, username, first_name } = message.chat;
+    private async onText(message: Message) {
+        const { id: chatId, username, first_name } = message.chat;
 
-            await this.userService.addOrReplace(
-                userId,
-                username || "",
-                first_name || "",
-                this.token
-            );
+        switch (message.text) {
+            case "/start": {
+                await this.userService.addOrReplace(
+                    chatId,
+                    username || "",
+                    first_name || "",
+                    this.token
+                );
 
-            switch (message.text) {
-                case "/start": {
-                    const replyMarkups = await this.getReplyMarkups(message);
-                    this.sendWelcomeMessage(message, replyMarkups);
-                    this.onStart(message);
-                    break;
-                }
-
-                default:
-                    break;
+                const replyMarkups = await this.getStartReplyMarkups(message);
+                this.sendWelcomeMessage(message, replyMarkups);
+                this.onStart(message);
+                break;
             }
 
-            const isAllJoined = await this.checkLockChannels(userId);
-
-            if (!isAllJoined) {
-                await this.sendLockChannels(userId);
-            } else {
+            case ADMIN_KEYBOARDS.MANAGEMENT: {
+                this.bot.sendMessage(chatId, "به پنل ادمین خوش اومدی.", {
+                    reply_markup: {
+                        resize_keyboard: true,
+                        keyboard: [
+                            [{ text: ADMIN_KEYBOARDS.SERVER_STATUS }],
+                            [{ text: ADMIN_KEYBOARDS.BOT_STATISTICS }],
+                        ]
+                    }
+                })
+                break;
             }
-        });
+
+            case ADMIN_KEYBOARDS.BOT_STATISTICS: {
+                break;
+            }
+
+            case ADMIN_KEYBOARDS.SERVER_STATUS: {
+                break;
+            }
+            default:
+                break;
+        }
+
+        const isAllJoined = await this.checkLockChannels(chatId);
+        if (!isAllJoined) {
+            await this.sendLockChannels(chatId);
+        } else {
+        }
     }
+
+    private async onCallbackQuery(callbackQuery: CallbackQuery) {}
 
     private async checkLockChannels(userId: number) {
         if (!this.lockChannels.length) return true;
@@ -130,7 +152,7 @@ export default abstract class BotFather {
         }
     }
 
-    private async getReplyMarkups(message: Message) {
+    private async getStartReplyMarkups(message: Message) {
         const isAdmin = await this.userService.isAdmin(
             message.chat.id,
             this.token
@@ -142,10 +164,7 @@ export default abstract class BotFather {
         };
 
         if (isAdmin) {
-            replyMarkup.keyboard.push(
-                [{ text: ADMIN_KEYBOARDS.SERVER_STATUS }],
-                [{ text: ADMIN_KEYBOARDS.BOT_STATISTICS }]
-            );
+            replyMarkup.keyboard.push([{ text: ADMIN_KEYBOARDS.MANAGEMENT }]);
         }
 
         return replyMarkup;

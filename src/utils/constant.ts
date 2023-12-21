@@ -5,6 +5,7 @@ export const enum DATABASE_MODELS {
 }
 
 export const enum ADMIN_KEYBOARDS {
+    MANAGEMENT = "مدیریت ☕️",
     SERVER_STATUS = "وضعیت سرور 📡",
     BOT_STATISTICS = "آمار ربات 📈"
 }
