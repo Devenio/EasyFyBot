@@ -8,7 +8,6 @@ import { BotService } from "../../database/services/bot.service";
 import { ADMIN_KEYBOARDS, CALLBACK_QUERY } from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
 import { ChannelService } from "../../database/services/channel.service";
-import { ChannelSchemaType } from "../../database/schemas/Channel";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -41,6 +40,7 @@ export default abstract class BotFather {
         );
     }
 
+    // Initial setups
     private async addBotToDatabase(name: string, token: string) {
         const response = await this.botService.findOne({ token });
 
@@ -68,6 +68,7 @@ export default abstract class BotFather {
         })) as ILockChannels[];
     }
 
+    // Events 
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
 
@@ -129,6 +130,7 @@ export default abstract class BotFather {
         }
     }
 
+    // Utils functions
     private async checkLockedChannels(chatId: number) {
         if (!this.lockChannels.length) return [];
 
@@ -202,6 +204,7 @@ export default abstract class BotFather {
         return replyMarkup;
     }
 
+    // Abstract functions
     abstract onStart(message: Message): void;
     abstract sendWelcomeMessage(
         message: Message,
