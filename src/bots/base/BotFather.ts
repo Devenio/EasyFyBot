@@ -32,8 +32,9 @@ export default abstract class BotFather {
             bot: this.bot,
         });
 
-        this.addBotToDatabase(params.name, params.token);
-        this.setLockChannels(params.token);
+        this.addBotToDatabase(params.name, params.token).then(() => {
+            this.setLockChannels(params.token);
+        });
 
         this.bot.on("text", (message) => this.onText(message));
         this.bot.on("callback_query", (callbackQuery) =>
