@@ -5,7 +5,6 @@ import TelegramBotType, {
     ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
-import { BotService } from "../../database/services/bot.service";
 import {
     KEYBOARD_BUTTON_TEXT,
     CALLBACK_QUERY,
@@ -21,7 +20,6 @@ const cloneDeep = require("lodash.clonedeep");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
-    private readonly botService = new BotService();
     private readonly channelService = new ChannelService();
 
     private readonly token: string = "";
@@ -37,10 +35,8 @@ export default abstract class BotFather {
             polling: true,
         });
 
-        this.addBotToDatabase(params.name, params.token).then(() => {
-            this.setLockChannels(params.token);
-            this.setKeyboard();
-        });
+        this.setLockChannels(params.token);
+        this.setKeyboard();
 
         this.bot.on("text", (message) => this.onText(message));
         this.bot.on("callback_query", (callbackQuery) =>
@@ -49,26 +45,8 @@ export default abstract class BotFather {
     }
 
     // Initial setups
-    private async addBotToDatabase(name: string, token: string) {
-        const response = await this.botService.findOne({ token });
-
-        if (!response) {
-            const bot = await this.botService.create({
-                name,
-                token,
-            });
-
-            this.botObjectId = bot?._id as Types.ObjectId;
-        } else {
-            this.botObjectId = response._id;
-        }
-    }
-
     private async setLockChannels(token: string) {
-        const bot = await this.botService.findOne({ token });
-        const channels = await this.channelService.find({
-            bot_to_lock_ids: { $in: [bot?._id] },
-        });
+        const channels = await this.channelService.find({});
 
         if (!channels) this.lockChannels = [];
 

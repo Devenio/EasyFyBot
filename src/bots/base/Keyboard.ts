@@ -194,7 +194,7 @@ export class Keyboard {
     }
 
     async setAdmins(botObjectId: Types.ObjectId) {
-        const admins = await this.userService.getAdmins(botObjectId);
+        const admins = await this.userService.getAdmins();
 
         if (!admins) {
             this.adminChatIds = [];

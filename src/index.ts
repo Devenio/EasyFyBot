@@ -1,6 +1,6 @@
 import { config } from "dotenv";
+import { MainBot } from "./bots";
 import { startDatabase } from "./database";
-import { PikaSpotify } from "./bots/spotify";
 
 config();
 
@@ -20,8 +20,8 @@ async function bootstrap() {
 }
 
 function startBots() {
-    const pikaSpotify = new PikaSpotify({
-        token: process.env.BOT_TOKEN_SPOTIFY || "",
+    new MainBot({
+        token: process.env.BOT_TOKEN || "",
     });
 }
 
