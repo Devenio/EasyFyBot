@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 import { UserSchema, UserSchemaType } from "../schemas/User";
 import { BaseService } from "./base.service";
@@ -13,22 +14,24 @@ export class UserService extends BaseService<UserSchemaType> {
         });
     }
 
-    async addOrReplace(chatId: number, username: string, firstName: string, botToken: string) {
+    async addOrReplace(chatId: number, username: string, firstName: string, botObjectId: Types.ObjectId) {
         const user = await this.findOne({ chat_id: chatId });
 
         if (!user) {
-            const createdUser = await this.create({
+            await this.create({
                 chat_id: chatId,
                 user_name: username,
                 first_name: firstName,
+                bots: [botObjectId]
             });
-
-            await this.botService.addUser(botToken, createdUser?._id as string)
         } else {
-            await user.set({
-                user_name: username,
-                first_name: firstName,
-            });
+            user.user_name = username;
+            user.first_name = firstName;
+            
+            if (!user.bots.includes(botObjectId)) {
+                user.bots.push(botObjectId);
+            }
+
             await user.save();
         }
 

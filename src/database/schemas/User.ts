@@ -19,7 +19,17 @@ export const UserSchema = new mongoose.Schema({
         ],
         default: [],
         required: false,
-    }
+    },
+    bots: {
+        type: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: BotModel,
+            },
+        ],
+        default: [],
+        required: true
+    },
 });
 
 export type UserSchemaType = InferSchemaType<typeof UserSchema>;

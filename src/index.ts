@@ -4,13 +4,19 @@ import { PikaSpotify } from "./bots/spotify";
 
 config();
 
-async function bootstrap() {
-    console.log("Bot Starting...\n");
+async function bootstrap() {    
 
-    await startDatabase();
-    startBots();
+    try {
+        console.log("Bot Starting...\n");
 
-    console.log("\nBot Started :)");
+        await startDatabase();
+        startBots();
+
+        console.log("\nBot Started :)");
+    } catch (error) {
+        console.error("ERROR: ", error)
+    }
+
 }
 
 function startBots() {

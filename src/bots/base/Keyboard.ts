@@ -10,7 +10,7 @@ export class Keyboard {
     private readonly userService = new UserService();
     private isAdmin = false;
     private readonly bot: TelegramBotType;
-    private readonly botKeyboards: IBotKeyboardButtons[][] = [
+    private readonly botKeyboards: IBotKeyboardButton[][] = [
         [
             {
                 text: ADMIN_KEYBOARDS.MANAGEMENT,
@@ -51,11 +51,8 @@ export class Keyboard {
         });
     }
 
-    private setButtonListener(keyboards: IBotKeyboardButtons[]) {
+    private setButtonListener(keyboards: IBotKeyboardButton[]) {
         keyboards.forEach((button) => {
-            if (button.isAdminButton && !this.isAdmin) {
-                return;
-            }
             if (button.children) {
                 button.children.forEach((childButton) => {
                     this.setButtonListener(childButton);
@@ -64,7 +61,7 @@ export class Keyboard {
 
             this.setNewKeyboard(button.text, (message) => {
                 if (button.callback) {
-                    button.callback(message);
+                    this.onBeforeCallback(message, button, button.callback)
                 }
                 if (button.callbackMessage) {
                     this.onKeyboardDefaultCallback(
@@ -77,10 +74,18 @@ export class Keyboard {
         });
     }
 
+    private async onBeforeCallback(message: Message, button: IBotKeyboardButton, callback: CallbackType) {
+        if (button.isAdminButton && !this.isAdmin) {
+            return;
+        }
+
+        callback(message);
+    }
+
     private async onKeyboardDefaultCallback(
         message: Message,
         callbackMessage: string,
-        childrenKeyboards?: IBotKeyboardButtons[][]
+        childrenKeyboards?: IBotKeyboardButton[][]
     ) {
         let keyboard: KeyboardButton[][] = [];
         if (childrenKeyboards) {
@@ -148,17 +153,23 @@ export class Keyboard {
     }
 
     setupKeyboard(isAdmin: boolean) {
-        this.isAdmin = isAdmin;
+        this.setIsAdmin(isAdmin);
         this.setKeyboardButtonsListeners();
+    }
+
+    setIsAdmin(isAdmin: boolean) {
+        this.isAdmin = isAdmin;
     }
 }
 
 // NOTE: You have to set at least one of callbackMessage OR callback function
 // NOTE: If set isAdminButton to true all children buttons will be admin button
-interface IBotKeyboardButtons extends KeyboardButton {
+interface IBotKeyboardButton extends KeyboardButton {
     text: ADMIN_KEYBOARDS;
     isAdminButton?: boolean;
     callbackMessage?: string;
-    callback?: (message: Message) => void;
-    children?: IBotKeyboardButtons[][];
+    callback?: CallbackType;
+    children?: IBotKeyboardButton[][];
 }
+
+type CallbackType = (message: Message) => void;  

@@ -9,6 +9,7 @@ import { BotService } from "../../database/services/bot.service";
 import { ADMIN_KEYBOARDS, CALLBACK_QUERY } from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
 import { ChannelService } from "../../database/services/channel.service";
+import { Types } from "mongoose";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -16,9 +17,10 @@ export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly botService = new BotService();
     private readonly channelService = new ChannelService();
-    private readonly botKeyboards;
 
+    private readonly botKeyboards;
     private readonly token: string = "";
+    private botObjectId: Types.ObjectId | null = null;
 
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
@@ -47,10 +49,14 @@ export default abstract class BotFather {
         const response = await this.botService.findOne({ token });
 
         if (!response) {
-            this.botService.create({
+            const bot = await this.botService.create({
                 name,
                 token,
             });
+
+            this.botObjectId = bot?._id as Types.ObjectId;
+        } else {
+            this.botObjectId = response._id;
         }
     }
 
@@ -73,7 +79,7 @@ export default abstract class BotFather {
     // Events
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
-        // TODO: rename message
+
         switch (message.text) {
             case "/start": {
                 const replyMarkups = await this.getStartReplyMarkups(message);
@@ -90,7 +96,7 @@ export default abstract class BotFather {
             chatId,
             username || "",
             first_name || "",
-            this.token
+            this.botObjectId as Types.ObjectId
         );
 
         const notJoinedChannels = await this.checkLockedChannels(chatId);
@@ -139,7 +145,8 @@ export default abstract class BotFather {
         if (!this.lockChannels.length) return [];
 
         const channels = [...this.lockChannels];
-        channels.forEach(async (channel) => {
+
+        for (const channel of channels) {
             try {
                 const chatMember = await this.bot.getChatMember(
                     channel.id,
@@ -158,7 +165,7 @@ export default abstract class BotFather {
             } catch (error) {
                 console.error("Error in checking lock channels: ", error);
             }
-        });
+        }
 
         return channels.filter((channel) => !channel.isJoined);
     }
