@@ -14,7 +14,12 @@ export class UserService extends BaseService<UserSchemaType> {
         });
     }
 
-    async addOrReplace(chatId: number, username: string, firstName: string, botObjectId: Types.ObjectId) {
+    async addOrReplace(
+        chatId: number,
+        username: string,
+        firstName: string,
+        botObjectId: Types.ObjectId
+    ) {
         const user = await this.findOne({ chat_id: chatId });
 
         if (!user) {
@@ -22,12 +27,12 @@ export class UserService extends BaseService<UserSchemaType> {
                 chat_id: chatId,
                 user_name: username,
                 first_name: firstName,
-                bots: [botObjectId]
+                bots: [botObjectId],
             });
         } else {
             user.user_name = username;
             user.first_name = firstName;
-            
+
             if (!user.bots.includes(botObjectId)) {
                 user.bots.push(botObjectId);
             }
@@ -46,6 +51,21 @@ export class UserService extends BaseService<UserSchemaType> {
             if (!user || !bot) return false;
 
             return user.is_super_admin || user.admin_bot_ids?.includes(bot._id);
+        } catch (error) {
+            console.error("Error in isAdmin query: ", error);
+        }
+    }
+
+    async getAdmins(botObjectId: Types.ObjectId) {
+        try {
+            const users = await this.find({
+                $or: [
+                    { is_super_admin: true },
+                    { admin_bot_ids: { $in: [botObjectId] } },
+                ],
+            });
+
+            return users;
         } catch (error) {
             console.error("Error in isAdmin query: ", error);
         }

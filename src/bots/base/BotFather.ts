@@ -6,21 +6,23 @@ import TelegramBotType, {
 } from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
 import { BotService } from "../../database/services/bot.service";
-import { ADMIN_KEYBOARDS, CALLBACK_QUERY } from "../../utils/constant";
+import { KEYBOARD_BUTTON_TEXT, CALLBACK_QUERY } from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
 import { ChannelService } from "../../database/services/channel.service";
 import { Types } from "mongoose";
+import { ObjectId } from "mongodb";
 
 const TelegramBot = require("node-telegram-bot-api");
+const cloneDeep = require('lodash.clonedeep');
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly botService = new BotService();
     private readonly channelService = new ChannelService();
 
-    private readonly botKeyboards;
     private readonly token: string = "";
-    private botObjectId: Types.ObjectId | null = null;
+    private botObjectId: Types.ObjectId = new ObjectId();
+    private botKeyboards: Keyboard | null = null;
 
     private lockChannels: ILockChannels[] = [];
     public readonly bot: TelegramBotType;
@@ -30,12 +32,10 @@ export default abstract class BotFather {
         this.bot = new TelegramBot(params.token, {
             polling: true,
         });
-        this.botKeyboards = new Keyboard({
-            bot: this.bot,
-        });
 
         this.addBotToDatabase(params.name, params.token).then(() => {
             this.setLockChannels(params.token);
+            this.setKeyboard();
         });
 
         this.bot.on("text", (message) => this.onText(message));
@@ -76,12 +76,22 @@ export default abstract class BotFather {
         })) as ILockChannels[];
     }
 
+    private async setKeyboard() {
+        this.botKeyboards = new Keyboard({
+            bot: this.bot
+        });
+
+        await this.botKeyboards.setAdmins(this.botObjectId)
+        this.botKeyboards.setupKeyboard()
+    }
+
     // Events
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
 
         switch (message.text) {
             case "/start": {
+                this.botKeyboards?.setAdmins(this.botObjectId);
                 const replyMarkups = await this.getStartReplyMarkups(message);
                 this.sendWelcomeMessage(message, replyMarkups);
                 this.onStart(message);
@@ -144,7 +154,7 @@ export default abstract class BotFather {
     private async checkLockedChannels(chatId: number) {
         if (!this.lockChannels.length) return [];
 
-        const channels = [...this.lockChannels];
+        const channels = cloneDeep(this.lockChannels) as ILockChannels[];
 
         for (const channel of channels) {
             try {
@@ -199,15 +209,13 @@ export default abstract class BotFather {
             this.token
         );
 
-        this.botKeyboards.setupKeyboard(!!isAdmin);
-
         const replyMarkup: ReplyKeyboardMarkup = {
             resize_keyboard: true,
             keyboard: [],
         };
 
         if (isAdmin) {
-            replyMarkup.keyboard.push([{ text: ADMIN_KEYBOARDS.MANAGEMENT }]);
+            replyMarkup.keyboard.push([{ text: KEYBOARD_BUTTON_TEXT.MANAGEMENT }]);
         }
 
         return replyMarkup;

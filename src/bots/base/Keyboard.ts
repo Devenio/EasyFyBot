@@ -1,39 +1,62 @@
 import { KeyboardButton, Message } from "node-telegram-bot-api";
-import { ADMIN_KEYBOARDS } from "../../utils/constant";
+import { KEYBOARD_BUTTON_TEXT } from "../../utils/constant";
 import TelegramBotType from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
+import { Types } from "mongoose";
 
 const osu = require("node-os-utils");
 const os = require("os");
 
+// NOTE: You have to set at least one of callbackMessage OR callback function
+// NOTE: If set isAdminButton to true all children buttons will be admin button
+// NOTE: Set no need callback for repeated buttons
+interface IBotKeyboardButton extends KeyboardButton {
+    text: KEYBOARD_BUTTON_TEXT;
+    isAdminButton?: boolean;
+    noNeedCallback?: boolean;
+    callbackMessage?: string;
+    callback?: (message: Message) => void;
+    children?: IBotKeyboardButton[][];
+}
+
 export class Keyboard {
     private readonly userService = new UserService();
-    private isAdmin = false;
+    private adminChatIds: number[] = [];
     private readonly bot: TelegramBotType;
     private readonly botKeyboards: IBotKeyboardButton[][] = [
         [
             {
-                text: ADMIN_KEYBOARDS.MANAGEMENT,
+                text: KEYBOARD_BUTTON_TEXT.MANAGEMENT,
                 callbackMessage: "به پنل ادمین خوش اومدی.",
                 isAdminButton: true,
                 children: [
                     [
                         {
-                            text: ADMIN_KEYBOARDS.SERVER_STATUS,
+                            text: KEYBOARD_BUTTON_TEXT.SERVER_STATUS,
                             callback: this.onServerStatus.bind(this),
+                            isAdminButton: true,
                         },
                     ],
                     [
                         {
-                            text: ADMIN_KEYBOARDS.BOT_STATISTICS,
+                            text: KEYBOARD_BUTTON_TEXT.BOT_STATISTICS,
                             callback: this.onBotStatistics.bind(this),
+                            isAdminButton: true,
                         },
                     ],
                     [
                         {
-                            text: ADMIN_KEYBOARDS.EXIT_ADMIN_PANEL,
+                            text: KEYBOARD_BUTTON_TEXT.EXIT_ADMIN_PANEL,
                             callbackMessage: "از پنل ادمین خارج شدید.",
-                            children: [[{ text: ADMIN_KEYBOARDS.MANAGEMENT }]],
+                            isAdminButton: true,
+                            children: [
+                                [
+                                    {
+                                        text: KEYBOARD_BUTTON_TEXT.MANAGEMENT,
+                                        noNeedCallback: true,
+                                    },
+                                ],
+                            ],
                         },
                     ],
                 ],
@@ -41,14 +64,12 @@ export class Keyboard {
         ],
     ];
 
-    constructor(data: { bot: TelegramBotType }) {
+    constructor(data: {
+        bot: TelegramBotType;
+        botKeyboards?: IBotKeyboardButton[][];
+    }) {
+        if (data.botKeyboards) this.botKeyboards = data.botKeyboards;
         this.bot = data.bot;
-    }
-
-    private setKeyboardButtonsListeners() {
-        this.botKeyboards.forEach((keyboardRow) => {
-            this.setButtonListener(keyboardRow);
-        });
     }
 
     private setButtonListener(keyboards: IBotKeyboardButton[]) {
@@ -59,23 +80,37 @@ export class Keyboard {
                 });
             }
 
+            if (button.noNeedCallback) return;
+
             this.setNewKeyboard(button.text, (message) => {
                 if (button.callback) {
-                    this.onBeforeCallback(message, button, button.callback)
+                    this.onBeforeCallback(message, button, button.callback);
                 }
                 if (button.callbackMessage) {
-                    this.onKeyboardDefaultCallback(
-                        message,
-                        button.callbackMessage,
-                        button.children
-                    );
+                    this.onBeforeCallback(message, button, (message) => {
+                        this.onKeyboardDefaultCallback(
+                            message,
+                            button.callbackMessage || "",
+                            button.children
+                        );
+                    });
                 }
             });
         });
     }
 
-    private async onBeforeCallback(message: Message, button: IBotKeyboardButton, callback: CallbackType) {
-        if (button.isAdminButton && !this.isAdmin) {
+    private async onBeforeCallback(
+        message: Message,
+        button: IBotKeyboardButton,
+        callback: (message: Message) => void
+    ) {
+        const isAdmin = this.adminChatIds.includes(message.chat.id);
+
+        if (button.isAdminButton && !isAdmin) {
+            this.bot.sendMessage(
+                message.chat.id,
+                "❌ شما به پنل ادمین دسترسی ندارید ❌"
+            );
             return;
         }
 
@@ -138,7 +173,7 @@ export class Keyboard {
 
     // Set new keyboard button and add listener for it
     private async setNewKeyboard(
-        text: ADMIN_KEYBOARDS,
+        text: KEYBOARD_BUTTON_TEXT,
         callback: (message: Message) => void
     ) {
         this.bot.on("text", (message) => {
@@ -152,24 +187,19 @@ export class Keyboard {
         };
     }
 
-    setupKeyboard(isAdmin: boolean) {
-        this.setIsAdmin(isAdmin);
-        this.setKeyboardButtonsListeners();
+    setupKeyboard() {
+        this.botKeyboards.forEach((keyboardRow) => {
+            this.setButtonListener(keyboardRow);
+        });
     }
 
-    setIsAdmin(isAdmin: boolean) {
-        this.isAdmin = isAdmin;
+    async setAdmins(botObjectId: Types.ObjectId) {
+        const admins = await this.userService.getAdmins(botObjectId);
+
+        if (!admins) {
+            this.adminChatIds = [];
+            return;
+        }
+        this.adminChatIds = admins?.map((admin) => admin.chat_id);
     }
 }
-
-// NOTE: You have to set at least one of callbackMessage OR callback function
-// NOTE: If set isAdminButton to true all children buttons will be admin button
-interface IBotKeyboardButton extends KeyboardButton {
-    text: ADMIN_KEYBOARDS;
-    isAdminButton?: boolean;
-    callbackMessage?: string;
-    callback?: CallbackType;
-    children?: IBotKeyboardButton[][];
-}
-
-type CallbackType = (message: Message) => void;  

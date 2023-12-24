@@ -4,7 +4,7 @@ export const enum DATABASE_MODELS {
     BOT = "Bot",
 }
 
-export const enum ADMIN_KEYBOARDS {
+export const enum KEYBOARD_BUTTON_TEXT {
     MANAGEMENT = "مدیریت ☕️",
     SERVER_STATUS = "وضعیت سرور 📡",
     BOT_STATISTICS = "آمار ربات 📈",
