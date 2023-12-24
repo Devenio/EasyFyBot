@@ -6,14 +6,18 @@ import TelegramBotType, {
 } from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
 import { BotService } from "../../database/services/bot.service";
-import { KEYBOARD_BUTTON_TEXT, CALLBACK_QUERY } from "../../utils/constant";
+import {
+    KEYBOARD_BUTTON_TEXT,
+    CALLBACK_QUERY,
+    REGEX,
+} from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
 import { ChannelService } from "../../database/services/channel.service";
 import { Types } from "mongoose";
 import { ObjectId } from "mongodb";
 
 const TelegramBot = require("node-telegram-bot-api");
-const cloneDeep = require('lodash.clonedeep');
+const cloneDeep = require("lodash.clonedeep");
 
 export default abstract class BotFather {
     private readonly userService = new UserService();
@@ -78,28 +82,25 @@ export default abstract class BotFather {
 
     private async setKeyboard() {
         this.botKeyboards = new Keyboard({
-            bot: this.bot
+            bot: this.bot,
         });
 
-        await this.botKeyboards.setAdmins(this.botObjectId)
-        this.botKeyboards.setupKeyboard()
+        await this.botKeyboards.setAdmins(this.botObjectId);
+        this.botKeyboards.setupKeyboard();
     }
 
     // Events
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
 
-        switch (message.text) {
-            case "/start": {
-                this.botKeyboards?.setAdmins(this.botObjectId);
-                const replyMarkups = await this.getStartReplyMarkups(message);
-                this.sendWelcomeMessage(message, replyMarkups);
-                this.onStart(message);
-                break;
-            }
+        if (message.text === "/start") {
+            this.botKeyboards?.setAdmins(this.botObjectId);
+            const replyMarkups = await this.getStartReplyMarkups(message);
+            this.onStart(message, replyMarkups);
+        }
 
-            default:
-                break;
+        if (REGEX.URL.test(message.text || "")) {
+            this.onLink(message);
         }
 
         await this.userService.addOrReplace(
@@ -215,18 +216,20 @@ export default abstract class BotFather {
         };
 
         if (isAdmin) {
-            replyMarkup.keyboard.push([{ text: KEYBOARD_BUTTON_TEXT.MANAGEMENT }]);
+            replyMarkup.keyboard.push([
+                { text: KEYBOARD_BUTTON_TEXT.MANAGEMENT },
+            ]);
         }
 
         return replyMarkup;
     }
 
     // Abstract functions
-    abstract onStart(message: Message): void;
-    abstract sendWelcomeMessage(
+    abstract onStart(
         message: Message,
-        replayMarkups: ReplyKeyboardMarkup
+        startReplyMarkups: ReplyKeyboardMarkup
     ): void;
+    abstract onLink(message: Message): void;
 }
 
 interface ILockChannels {
