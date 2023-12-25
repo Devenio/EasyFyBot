@@ -45,8 +45,8 @@ export default abstract class BotFather {
         this.bot.on("message", (message) => this.onMessage(message));
         this.bot.on("video", (message) => this.onVideo(message));
         this.bot.on("photo", (message) => this.onPhoto(message));
-        this.bot.on("text", (message, metadata) =>
-            this.onText(message, metadata)
+        this.bot.on("text", (message) =>
+            this.onText(message)
         );
         this.bot.on("callback_query", (callbackQuery) =>
             this.onCallbackQuery(callbackQuery)
@@ -106,7 +106,7 @@ export default abstract class BotFather {
         this.bot.sendMessage(message.chat.id, "🎞 عکس دریافت شد");
     }
 
-    private async onText(message: Message, metadata: Metadata) {
+    private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
 
         const notJoinedChannels = await this.checkLockedChannels(chatId);
@@ -206,7 +206,7 @@ export default abstract class BotFather {
     async onStart(message: Message, startReplyMarkups: ReplyKeyboardMarkup) {
         this.bot.sendMessage(
             message.chat.id,
-            `Hi ${message.chat.first_name} welcome to bot`,
+            `سلام ${message.chat.first_name} به ربات نودلین خوش اومدی ❤️`,
             {
                 reply_markup: {
                     ...startReplyMarkups,
@@ -233,7 +233,7 @@ export default abstract class BotFather {
 
                 this.bot.sendMessage(
                     chatId,
-                    "حالا لینک پستی که میخوای دانلود کنی رو بفرست 📌"
+                    "حالا برو از چنل نودلین هر فیلم و عکسی که میخوای رو انتخاب کن @NudeLean ❤️‍🔥"
                 );
             } else {
                 this.bot.answerCallbackQuery(callbackQuery.id, {
@@ -309,7 +309,7 @@ export default abstract class BotFather {
         userId: number,
         notJoinedChannels: ILockChannels[]
     ) {
-        const joinMessage = `To use this bot, please join the following channels 🫠:`;
+        const joinMessage = `برای استفاده از ربات تو چنلای زیر عضو شو بعدش لذت ببر 🫠:`;
 
         this.bot.sendMessage(userId, joinMessage, {
             reply_markup: {
@@ -319,7 +319,7 @@ export default abstract class BotFather {
                     }),
                     [
                         {
-                            text: "I have joined ✅",
+                            text: "جوین شدم ✅",
                             callback_data: CALLBACK_QUERY.JOINED_CHANNELS,
                         },
                     ],
