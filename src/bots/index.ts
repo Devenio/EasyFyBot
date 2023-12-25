@@ -11,20 +11,4 @@ export class MainBot extends BotFather {
             name: "MainBot",
         });
     }
-
-    onStart(message: Message, replyMarkup: ReplyKeyboardMarkup): void {
-        this.bot.sendMessage(
-            message.chat.id,
-            `Hi ${message.chat.first_name} welcome to bot`,
-            {
-                reply_markup: {
-                    ...replyMarkup,
-                },
-            }
-        );
-    }
-
-    onLink(message: Message): void {
-        return;
-    }
 }

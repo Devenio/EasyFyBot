@@ -4,7 +4,6 @@ import { UserSchema, UserSchemaType } from "../schemas/User";
 import { BaseService } from "./base.service";
 
 export class UserService extends BaseService<UserSchemaType> {
-
     constructor() {
         super({
             modelName: DATABASE_MODELS.USER,
@@ -12,12 +11,7 @@ export class UserService extends BaseService<UserSchemaType> {
         });
     }
 
-    async addOrReplace(
-        chatId: number,
-        username: string,
-        firstName: string,
-        botObjectId: Types.ObjectId
-    ) {
+    async addOrReplace(chatId: number, username: string, firstName: string) {
         const user = await this.findOne({ chat_id: chatId });
 
         if (!user) {
@@ -51,9 +45,7 @@ export class UserService extends BaseService<UserSchemaType> {
     async getAdmins() {
         try {
             const users = await this.find({
-                $or: [
-                    { is_admin: true },
-                ],
+                $or: [{ is_admin: true }],
             });
 
             return users;

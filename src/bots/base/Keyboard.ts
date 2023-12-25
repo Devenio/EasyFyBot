@@ -193,13 +193,7 @@ export class Keyboard {
         });
     }
 
-    async setAdmins(botObjectId: Types.ObjectId) {
-        const admins = await this.userService.getAdmins();
-
-        if (!admins) {
-            this.adminChatIds = [];
-            return;
-        }
-        this.adminChatIds = admins?.map((admin) => admin.chat_id);
+    async setAdmins(admins: number[]) {
+        this.adminChatIds = admins
     }
 }

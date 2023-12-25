@@ -1,6 +1,7 @@
 export const enum DATABASE_MODELS {
     USER = "User",
     CHANNEL = "Channel",
+    FILE = "File",
 }
 
 export const enum KEYBOARD_BUTTON_TEXT {
@@ -12,6 +13,8 @@ export const enum KEYBOARD_BUTTON_TEXT {
 
 export const enum CALLBACK_QUERY {
     JOINED_CHANNELS = "JOINED_CHANNELS",
+    LIKE = "LIKE_",
+    DOWNLOAD = "DOWNLOAD",
 }
 
 export const REGEX = {

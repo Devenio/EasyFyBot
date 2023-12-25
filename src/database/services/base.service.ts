@@ -1,11 +1,15 @@
 import mongoose, {
     Document,
     FilterQuery,
+    IfAny,
     Model,
     Require_id,
     Schema,
 } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
+import { ObjectId } from "mongoose";
+import { UpdateQuery } from "mongoose";
+import { QueryOptions } from "mongoose";
 
 export abstract class BaseService<SCHEMA_TYPE> {
     private readonly schema: Schema;
@@ -34,16 +38,25 @@ export abstract class BaseService<SCHEMA_TYPE> {
         }
     }
 
-    async create(options: SCHEMA_TYPE) {
+    async create(options: SCHEMA_TYPE): Promise<Document<SCHEMA_TYPE> | undefined> {
         try {
             const newDocument = new this.collection({
                 ...options,
             });
 
             const response = await newDocument.save();
-            return response;
+            return response as Document<SCHEMA_TYPE>;
         } catch (err) {
             console.error("Error in Create: ", err);
+        }
+    }
+
+    async findOneAndUpdate(filter?: FilterQuery<SCHEMA_TYPE>, update?: UpdateQuery<SCHEMA_TYPE>, options?: QueryOptions<SCHEMA_TYPE>) {
+        try {
+            const response = await this.collection.findOneAndUpdate(filter, update, options);
+            return response;
+        } catch (error) {
+            console.error("Unable to update: ", error);
         }
     }
 
