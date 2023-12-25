@@ -3,22 +3,19 @@ import TelegramBotType, {
     CallbackQuery,
     Message,
     Metadata,
-    PhotoSize,
     ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
+import { FILE_TYPES, FileSchemaType } from "../../database/schemas/File";
 import { ChannelService } from "../../database/services/channel.service";
+import { FileService } from "../../database/services/file.service";
 import { UserService } from "../../database/services/user.service";
 import {
     CALLBACK_QUERY,
     KEYBOARD_BUTTON_TEXT,
     REGEX,
 } from "../../utils/constant";
-import { Keyboard } from "./Keyboard";
-import { FileService } from "../../database/services/file.service";
-import { randomUUID } from "crypto";
 import { generateRandomString } from "../../utils/random";
-import { FILE_TYPES, FileSchemaType } from "../../database/schemas/File";
-import { ObjectId } from "mongoose";
+import { Keyboard } from "./Keyboard";
 
 const TelegramBot = require("node-telegram-bot-api");
 const cloneDeep = require("lodash.clonedeep");
@@ -112,6 +109,12 @@ export default abstract class BotFather {
     private async onText(message: Message, metadata: Metadata) {
         const { id: chatId, username, first_name } = message.chat;
 
+        const notJoinedChannels = await this.checkLockedChannels(chatId);
+        if (notJoinedChannels.length) {
+            await this.sendLockChannels(chatId, notJoinedChannels);
+            return;
+        }
+
         if (message.text === "/start") {
             this.updateAdmins();
             const replyMarkups = await this.getStartReplyMarkups(message);
@@ -143,11 +146,6 @@ export default abstract class BotFather {
             username || "",
             first_name || ""
         );
-
-        const notJoinedChannels = await this.checkLockedChannels(chatId);
-        if (notJoinedChannels.length) {
-            await this.sendLockChannels(chatId, notJoinedChannels);
-        }
     }
 
     async onDownloadFile(message: Message) {
@@ -163,19 +161,41 @@ export default abstract class BotFather {
         const replyMarkup = {
             inline_keyboard: this.generateFileInlineKeyboard(file),
         };
+        let fileMessage: Message;
 
         if (file.type === FILE_TYPES.PHOTO) {
-            this.bot.sendPhoto(message.chat.id, file.file_id, {
-                caption,
-                reply_markup: replyMarkup,
-            });
+            fileMessage = await this.bot.sendPhoto(
+                message.chat.id,
+                file.file_id,
+                {
+                    caption,
+                    reply_markup: replyMarkup,
+                }
+            );
         }
         if (file.type === FILE_TYPES.VIDEO) {
-            this.bot.sendVideo(message.chat.id, file.file_id, {
-                caption,
-                reply_markup: replyMarkup,
-            });
+            fileMessage = await this.bot.sendVideo(
+                message.chat.id,
+                file.file_id,
+                {
+                    caption,
+                    reply_markup: replyMarkup,
+                }
+            );
         }
+
+        this.bot.sendMessage(
+            message.chat.id,
+            `
+            ⚠️ توجه کنید که بعد از 60 ثانیه حذف خواهد شد.
+
+            ⚠️ لطفا فایل (های) ارسالی را به پیوی خود بفرستید و انجا مشاهده کنید.
+            `
+        );
+
+        setTimeout(() => {
+            this.bot.deleteMessage(fileMessage.chat.id, fileMessage.message_id)
+        }, 60000);
 
         this.fileService.findOneAndUpdate(
             { short_id: file.short_id },
