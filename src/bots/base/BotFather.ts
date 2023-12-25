@@ -25,6 +25,9 @@ export default abstract class BotFather {
     private readonly channelService = new ChannelService();
     private readonly fileService = new FileService();
 
+    // if false video and photos will directly send to channel
+    private isOnSaveMode = true;
+
     private readonly token: string = "";
     private botKeyboards: Keyboard | null = null;
     private adminChatIds: number[] = [];
@@ -45,9 +48,7 @@ export default abstract class BotFather {
         this.bot.on("message", (message) => this.onMessage(message));
         this.bot.on("video", (message) => this.onVideo(message));
         this.bot.on("photo", (message) => this.onPhoto(message));
-        this.bot.on("text", (message) =>
-            this.onText(message)
-        );
+        this.bot.on("text", (message) => this.onText(message));
         this.bot.on("callback_query", (callbackQuery) =>
             this.onCallbackQuery(callbackQuery)
         );
@@ -99,11 +100,11 @@ export default abstract class BotFather {
     }
 
     private async onPhoto(message: Message) {
-        this.bot.sendMessage(message.chat.id, "🎞 ویدیو دریافت شد");
+        this.bot.sendMessage(message.chat.id, "🎞 عکس دریافت شد");
     }
 
     private async onVideo(message: Message) {
-        this.bot.sendMessage(message.chat.id, "🎞 عکس دریافت شد");
+        this.bot.sendMessage(message.chat.id, "🎞 ویدیو دریافت شد");
     }
 
     private async onText(message: Message) {
@@ -129,11 +130,11 @@ export default abstract class BotFather {
         }
 
         // sta = Send To All
-        if (message.text === "/sta" && this.isAdmin(chatId)) {
+        if ((message.text === "/sta" || message.text?.startsWith("/sta ")) && this.isAdmin(chatId)) {
             this.sendToAll(message);
         }
         // stc = Send To Channel
-        if (message.text === "/stc" && this.isAdmin(chatId)) {
+        if ((message.text === "/stc" || message.text?.startsWith("/stc ")) && this.isAdmin(chatId)) {
             this.sendToChannel(message);
         }
 
@@ -163,24 +164,21 @@ export default abstract class BotFather {
         };
         let fileMessage: Message;
 
-        if (file.type === FILE_TYPES.PHOTO) {
+        if (file.type === FILE_TYPES.NUDE_PHOTO) {
             fileMessage = await this.bot.sendPhoto(
                 message.chat.id,
                 file.file_id,
-                {
-                    caption,
-                    reply_markup: replyMarkup,
-                }
+                { caption, reply_markup: replyMarkup }
             );
         }
-        if (file.type === FILE_TYPES.VIDEO) {
+        if (
+            file.type === FILE_TYPES.NUDE_VIDEO ||
+            file.type === FILE_TYPES.VIDEO
+        ) {
             fileMessage = await this.bot.sendVideo(
                 message.chat.id,
                 file.file_id,
-                {
-                    caption,
-                    reply_markup: replyMarkup,
-                }
+                { caption, reply_markup: replyMarkup }
             );
         }
 
@@ -194,7 +192,7 @@ export default abstract class BotFather {
         );
 
         setTimeout(() => {
-            this.bot.deleteMessage(fileMessage.chat.id, fileMessage.message_id)
+            this.bot.deleteMessage(fileMessage.chat.id, fileMessage.message_id);
         }, 60000);
 
         this.fileService.findOneAndUpdate(
@@ -412,12 +410,15 @@ export default abstract class BotFather {
         const fileShortId = generateRandomString();
 
         if (message.reply_to_message.photo) {
-            const fileId = message.reply_to_message.photo[3].file_id;
+            const fileId =
+                message.reply_to_message.photo[
+                    message.reply_to_message.photo.length - 1
+                ].file_id;
 
             await this.fileService.create({
                 file_id: fileId,
                 short_id: fileShortId,
-                type: FILE_TYPES.PHOTO,
+                type: FILE_TYPES.NUDE_PHOTO,
             });
 
             this.bot.sendMessage(
@@ -429,6 +430,7 @@ export default abstract class BotFather {
                 `,
                 {
                     parse_mode: "HTML",
+                    disable_web_page_preview: true
                 }
             );
         }
@@ -436,23 +438,49 @@ export default abstract class BotFather {
         if (message.reply_to_message.video) {
             const fileId = message.reply_to_message.video.file_id;
 
-            await this.fileService.create({
-                file_id: fileId,
-                short_id: fileShortId,
-                type: FILE_TYPES.VIDEO,
-            });
+            if (message.text?.includes("nude")) {
+                await this.fileService.create({
+                    file_id: fileId,
+                    short_id: fileShortId,
+                    type: FILE_TYPES.NUDE_VIDEO,
+                });
 
-            this.bot.sendMessage(
-                this.mainChannelId,
-                `
-                    🔆 Video
+                this.bot.sendMessage(
+                    this.mainChannelId,
+                    `
+                        🔆 Video
+    
+                        <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده نود از ربات </a>
+                    `,
+                    {
+                        parse_mode: "HTML",
+                        disable_web_page_preview: true
+                    }
+                );
+            } else {
+                await this.fileService.create({
+                    file_id: fileId,
+                    short_id: fileShortId,
+                    type: FILE_TYPES.VIDEO,
+                });
 
-                    <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده نود از ربات </a>
-                `,
-                {
-                    parse_mode: "HTML",
-                }
-            );
+                this.bot.sendMessage(
+                    this.mainChannelId,
+                    `
+                        🔆 ${(
+                            (message.reply_to_message.video
+                                .file_size as number) /
+                            (1024 * 1024)
+                        ).toFixed(2)} MB
+    
+                        <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده ویدیو از ربات </a>
+                    `,
+                    {
+                        parse_mode: "HTML",
+                        disable_web_page_preview: true
+                    }
+                );
+            }
         }
     }
 }

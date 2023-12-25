@@ -1,9 +1,8 @@
-import { randomUUID } from "crypto";
 import mongoose, { InferSchemaType } from "mongoose";
-
 export enum FILE_TYPES {
     VIDEO = "VIDEO",
-    PHOTO = "PHOTO",
+    NUDE_VIDEO = "NUDE_VIDEO",
+    NUDE_PHOTO = "NUDE_PHOTO",
 }
 
 export const FileSchema = new mongoose.Schema({
