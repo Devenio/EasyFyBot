@@ -2,8 +2,7 @@
 import TelegramBotType, {
     CallbackQuery,
     Message,
-    Metadata,
-    ReplyKeyboardMarkup,
+    ReplyKeyboardMarkup
 } from "node-telegram-bot-api";
 import { FILE_TYPES, FileSchemaType } from "../../database/schemas/File";
 import { ChannelService } from "../../database/services/channel.service";
@@ -16,6 +15,7 @@ import {
 } from "../../utils/constant";
 import { generateRandomString } from "../../utils/random";
 import { Keyboard } from "./Keyboard";
+import { KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
 
 const TelegramBot = require("node-telegram-bot-api");
 const cloneDeep = require("lodash.clonedeep");
@@ -28,6 +28,7 @@ export default abstract class BotFather {
     // if false video and photos will directly send to channel
     private isOnSaveMode = true;
 
+    private readonly keyboardConfig;
     private readonly token: string = "";
     private botKeyboards: Keyboard | null = null;
     private adminChatIds: number[] = [];
@@ -43,7 +44,14 @@ export default abstract class BotFather {
         });
 
         this.setLockChannels();
-        this.setKeyboard();
+
+        this.keyboardConfig = new KeyboardConfigurationProvider(this.bot);
+        this.botKeyboards = new Keyboard(
+            this.bot,
+            this.keyboardConfig.getLayouts(),
+            this.keyboardConfig.getCallbacks()
+        );
+        this.botKeyboards.initialize();
 
         this.bot.on("message", (message) => this.onMessage(message));
         this.bot.on("video", (message) => this.onVideo(message));
@@ -68,17 +76,6 @@ export default abstract class BotFather {
         })) as ILockChannels[];
     }
 
-    private async setKeyboard() {
-        this.botKeyboards = new Keyboard({
-            bot: this.bot,
-        });
-
-        const adminChatIds = await this.getAdminChatIds();
-        this.adminChatIds = adminChatIds;
-        this.botKeyboards.setAdmins(adminChatIds);
-        this.botKeyboards.setupKeyboard();
-    }
-
     private async updateAdmins() {
         const adminChatIds = await this.getAdminChatIds();
         this.adminChatIds = adminChatIds;
@@ -96,15 +93,15 @@ export default abstract class BotFather {
 
     // Events
     private async onMessage(message: Message) {
-        // console.log("On message: ", message, "\n\n\n");
+        return
     }
 
     private async onPhoto(message: Message) {
-        this.bot.sendMessage(message.chat.id, "🎞 عکس دریافت شد");
+        return
     }
 
     private async onVideo(message: Message) {
-        this.bot.sendMessage(message.chat.id, "🎞 ویدیو دریافت شد");
+        return
     }
 
     private async onText(message: Message) {
@@ -204,7 +201,7 @@ export default abstract class BotFather {
     async onStart(message: Message, startReplyMarkups: ReplyKeyboardMarkup) {
         this.bot.sendMessage(
             message.chat.id,
-            `سلام ${message.chat.first_name} به ربات نودلین خوش اومدی ❤️`,
+            `❤️‍🔥 سلام ${message.chat.first_name} به ربات مزایده اکانت های پراپ فرم تیم "@BLPMaster" خوش اومدی ❤️‍🔥`,
             {
                 reply_markup: {
                     ...startReplyMarkups,

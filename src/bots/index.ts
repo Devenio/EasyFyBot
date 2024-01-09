@@ -1,5 +1,4 @@
 import { config } from "dotenv";
-import { Message, ReplyKeyboardMarkup } from "node-telegram-bot-api";
 import BotFather from "./base/BotFather";
 
 config();
