@@ -30,7 +30,7 @@ export class UserService extends BaseService<UserSchemaType> {
         return user;
     }
 
-    async isAdmin(chatId: number, botToken: string) {
+    async isAdmin(chatId: number) {
         try {
             const user = await this.findOne({ chat_id: chatId });
 

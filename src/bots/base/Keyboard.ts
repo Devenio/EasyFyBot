@@ -1,4 +1,8 @@
-import TelegramBotType, { KeyboardButton, Message } from "node-telegram-bot-api";
+import TelegramBotType, {
+    KeyboardButton,
+    Message,
+} from "node-telegram-bot-api";
+import { KEYBOARD_LAYOUTS } from "./KeyboardConfigurationProvider";
 
 // NOTE: You have to set at least one of callbackMessage OR callback function
 // NOTE: If set isAdminButton to true all children buttons will be admin button
@@ -8,9 +12,10 @@ export interface IBotKeyboardButton extends KeyboardButton {
     isAdminButton?: boolean;
     callbackMessage?: string;
     callbackId?: string;
+    callback?: (message: Message) => void;
     subLayoutId?: string;
 }
-type KeyboardLayoutFunction = () => IBotKeyboardButton[][];
+type KeyboardLayoutFunction = (param?: any) => IBotKeyboardButton[][];
 export interface IKeyboardLayout {
     [key: string]: KeyboardLayoutFunction;
 }
@@ -40,6 +45,7 @@ export class Keyboard {
             this.setNewKeyboard(button.text, (message) => {
                 if (button.callbackId) {
                     this.onBeforeCallback(message, button, {
+                        callback: button.callback,
                         callbackId: button.callbackId,
                     });
                 }
@@ -121,6 +127,7 @@ export class Keyboard {
 
                 return child.map((button) => ({
                     text: button.text,
+                    request_contact: button.request_contact
                 }));
             });
         }
@@ -134,15 +141,20 @@ export class Keyboard {
     }
 
     // Set new keyboard button and add listener for it
+    private readonly settledButtonsListeners: string[] = [];
     private async setNewKeyboard(
         text: string,
         callback: (message: Message) => void
     ) {
+        if (this.settledButtonsListeners.includes(text)) return text;
+
         this.botInstance.on("text", (message) => {
             if (message.text === text) {
                 callback(message);
             }
         });
+
+        this.settledButtonsListeners.push(text);
 
         return {
             text,

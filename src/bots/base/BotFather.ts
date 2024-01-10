@@ -2,16 +2,16 @@
 import TelegramBotType, {
     CallbackQuery,
     Message,
-    ReplyKeyboardMarkup
+    ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
 import { ChannelService } from "../../database/services/channel.service";
 import { UserService } from "../../database/services/user.service";
-import {
-    CALLBACK_QUERY,
-    KEYBOARD_BUTTON_TEXT
-} from "../../utils/constant";
+import { CALLBACK_QUERY, KEYBOARD_BUTTON_TEXT } from "../../utils/constant";
 import { Keyboard } from "./Keyboard";
-import { KEYBOARD_LAYOUTS, KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
+import {
+    KEYBOARD_LAYOUTS,
+    KeyboardConfigurationProvider,
+} from "./KeyboardConfigurationProvider";
 
 const TelegramBot = require("node-telegram-bot-api");
 const cloneDeep = require("lodash.clonedeep");
@@ -52,6 +52,7 @@ export default abstract class BotFather {
         this.bot.on("video", (message) => this.onVideo(message));
         this.bot.on("photo", (message) => this.onPhoto(message));
         this.bot.on("text", (message) => this.onText(message));
+        this.bot.on("contact", (message) => this.onContact(message));
         this.bot.on("callback_query", (callbackQuery) =>
             this.onCallbackQuery(callbackQuery)
         );
@@ -88,15 +89,35 @@ export default abstract class BotFather {
 
     // Events
     private async onMessage(message: Message) {
-        return
+        return;
     }
 
     private async onPhoto(message: Message) {
-        return
+        return;
     }
 
     private async onVideo(message: Message) {
-        return
+        return;
+    }
+
+    private async onContact(message: Message) {
+        await this.userService.findOneAndUpdate(
+            {
+                chat_id: message.chat.id,
+            },
+            { phone: message.contact?.phone_number },
+            { new: true }
+        );
+
+        const replyMarkups = await this.getStartReplyMarkups(message);
+
+        this.bot.sendMessage(
+            message.chat.id,
+            "شماره دریافت شد ✅\n⚡️ حالا میتونید از خدمات ربات استفاده کنید:",
+            {
+                reply_markup: replyMarkups,
+            }
+        );
     }
 
     private async onText(message: Message) {
@@ -223,17 +244,20 @@ export default abstract class BotFather {
 
     private async getStartReplyMarkups(message: Message) {
         const isAdmin = await this.userService.isAdmin(
-            message.chat.id,
-            this.token
+            message.chat.id
         );
 
         const replyMarkup: ReplyKeyboardMarkup = {
             resize_keyboard: true,
-            keyboard: [],
+            keyboard: this.keyboardConfig.getLayoutKeyboards(
+                KEYBOARD_LAYOUTS.USER_MAIN
+            ),
         };
 
         if (isAdmin) {
-            const adminKeyboardLayout = this.keyboardConfig.getLayoutKeyboards(KEYBOARD_LAYOUTS.ADMIN_MAIN)
+            const adminKeyboardLayout = this.keyboardConfig.getLayoutKeyboards(
+                KEYBOARD_LAYOUTS.ADMIN_MAIN
+            );
             replyMarkup.keyboard = adminKeyboardLayout;
         }
 
