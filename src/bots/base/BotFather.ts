@@ -4,9 +4,7 @@ import TelegramBotType, {
     Message,
     ReplyKeyboardMarkup
 } from "node-telegram-bot-api";
-import { FILE_TYPES, FileSchemaType } from "../../database/schemas/File";
 import { ChannelService } from "../../database/services/channel.service";
-import { FileService } from "../../database/services/file.service";
 import { UserService } from "../../database/services/user.service";
 import {
     CALLBACK_QUERY,
@@ -23,7 +21,6 @@ const cloneDeep = require("lodash.clonedeep");
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly channelService = new ChannelService();
-    private readonly fileService = new FileService();
 
     // if false video and photos will directly send to channel
     private isOnSaveMode = true;
@@ -123,78 +120,13 @@ export default abstract class BotFather {
             message.text?.startsWith("/start") &&
             message.text?.split(" ").length == 2
         ) {
-            this.onDownloadFile(message);
-        }
-
-        // sta = Send To All
-        if ((message.text === "/sta" || message.text?.startsWith("/sta ")) && this.isAdmin(chatId)) {
-            this.sendToAll(message);
-        }
-        // stc = Send To Channel
-        if ((message.text === "/stc" || message.text?.startsWith("/stc ")) && this.isAdmin(chatId)) {
-            this.sendToChannel(message);
-        }
-
-        if (REGEX.URL.test(message.text || "")) {
-            // this.onLink(message);
+            // For Query start
         }
 
         await this.userService.addOrReplace(
             chatId,
             username || "",
             first_name || ""
-        );
-    }
-
-    async onDownloadFile(message: Message) {
-        const file = await this.fileService.findOne({
-            short_id: message.text?.split(" ")[1],
-        });
-        if (!file) {
-            this.bot.sendMessage(message.chat.id, `فایل یافت نشد  😔`);
-            return;
-        }
-
-        const caption = "🔥 Channel : @NudeLean";
-        const replyMarkup = {
-            inline_keyboard: this.generateFileInlineKeyboard(file),
-        };
-        let fileMessage: Message;
-
-        if (file.type === FILE_TYPES.NUDE_PHOTO) {
-            fileMessage = await this.bot.sendPhoto(
-                message.chat.id,
-                file.file_id,
-                { caption, reply_markup: replyMarkup }
-            );
-        }
-        if (
-            file.type === FILE_TYPES.NUDE_VIDEO ||
-            file.type === FILE_TYPES.VIDEO
-        ) {
-            fileMessage = await this.bot.sendVideo(
-                message.chat.id,
-                file.file_id,
-                { caption, reply_markup: replyMarkup }
-            );
-        }
-
-        this.bot.sendMessage(
-            message.chat.id,
-            `
-            ⚠️ توجه کنید که بعد از 60 ثانیه حذف خواهد شد.
-
-            ⚠️ لطفا فایل (های) ارسالی را به پیوی خود بفرستید و انجا مشاهده کنید.
-            `
-        );
-
-        setTimeout(() => {
-            this.bot.deleteMessage(fileMessage.chat.id, fileMessage.message_id);
-        }, 60000);
-
-        this.fileService.findOneAndUpdate(
-            { short_id: file.short_id },
-            { $inc: { downloads: 1 } }
         );
     }
 
@@ -236,38 +168,6 @@ export default abstract class BotFather {
                 });
             }
         }
-
-        if (callbackQuery.data?.startsWith(CALLBACK_QUERY.LIKE)) {
-            const file = await this.fileService.findOneAndUpdate(
-                { short_id: callbackQuery.data.split("_")[1] },
-                { $inc: { likes: 1 } }
-            );
-
-            if (!file) {
-                this.bot.answerCallbackQuery(callbackQuery.id, {
-                    text: "خطا",
-                });
-                return;
-            }
-
-            this.bot.answerCallbackQuery(callbackQuery.id, {
-                text: "پست لایک شد ❤️",
-            });
-
-            this.bot.editMessageReplyMarkup(
-                { inline_keyboard: this.generateFileInlineKeyboard(file) },
-                {
-                    chat_id: callbackQuery.message.chat.id,
-                    message_id: callbackQuery.message.message_id,
-                }
-            );
-        }
-
-        if (callbackQuery.data?.startsWith(CALLBACK_QUERY.DOWNLOAD)) {
-            this.bot.answerCallbackQuery(callbackQuery.id, {
-                text: "این دکمه صرفا جهت نمایش تعداد دانلود هاست :)",
-            });
-        }
     }
 
     // Utils functions
@@ -304,7 +204,7 @@ export default abstract class BotFather {
         userId: number,
         notJoinedChannels: ILockChannels[]
     ) {
-        const joinMessage = `برای استفاده از ربات تو چنلای زیر عضو شو بعدش لذت ببر 🫠:`;
+        const joinMessage = `برای استفاده از ربات تو چنلای زیر عضو شو 🫠:`;
 
         this.bot.sendMessage(userId, joinMessage, {
             reply_markup: {
@@ -345,140 +245,6 @@ export default abstract class BotFather {
 
     isAdmin(chatId: number) {
         return this.adminChatIds.includes(chatId);
-    }
-
-    generateFileInlineKeyboard(file: FileSchemaType) {
-        return [
-            [
-                {
-                    text: `تعداد دانلود : ${file.downloads}`,
-                    callback_data: CALLBACK_QUERY.DOWNLOAD,
-                },
-            ],
-            [
-                {
-                    text: `❤️ ${file.likes}`,
-                    callback_data: `${CALLBACK_QUERY.LIKE}${file.short_id}`,
-                },
-            ],
-        ];
-    }
-
-    // Command Methods
-    sendToAll(message: Message) {
-        const chatId = message.chat.id;
-
-        if (
-            !message.reply_to_message ||
-            (!message.reply_to_message.photo && !message.reply_to_message.video)
-        ) {
-            this.bot.sendMessage(
-                chatId,
-                "روی یک پیام حاوی عکس یا فیلم ریپلای کنید !"
-            );
-            return;
-        }
-
-        if (message.reply_to_message.photo) {
-            const fileId = message.reply_to_message.photo[3].file_id;
-
-            this.bot.sendPhoto(chatId, fileId);
-        }
-
-        if (message.reply_to_message.video) {
-            console.log(message.reply_to_message.video);
-        }
-    }
-
-    async sendToChannel(message: Message) {
-        const chatId = message.chat.id;
-
-        if (
-            !message.reply_to_message ||
-            (!message.reply_to_message.photo && !message.reply_to_message.video)
-        ) {
-            this.bot.sendMessage(
-                chatId,
-                "روی یک پیام حاوی عکس یا فیلم ریپلای کنید !"
-            );
-            return;
-        }
-
-        const fileShortId = generateRandomString();
-
-        if (message.reply_to_message.photo) {
-            const fileId =
-                message.reply_to_message.photo[
-                    message.reply_to_message.photo.length - 1
-                ].file_id;
-
-            await this.fileService.create({
-                file_id: fileId,
-                short_id: fileShortId,
-                type: FILE_TYPES.NUDE_PHOTO,
-            });
-
-            this.bot.sendMessage(
-                this.mainChannelId,
-                `
-                    🔆 Photo
-
-                    <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده نود از ربات </a>
-                `,
-                {
-                    parse_mode: "HTML",
-                    disable_web_page_preview: true
-                }
-            );
-        }
-
-        if (message.reply_to_message.video) {
-            const fileId = message.reply_to_message.video.file_id;
-
-            if (message.text?.includes("nude")) {
-                await this.fileService.create({
-                    file_id: fileId,
-                    short_id: fileShortId,
-                    type: FILE_TYPES.NUDE_VIDEO,
-                });
-
-                this.bot.sendMessage(
-                    this.mainChannelId,
-                    `
-                        🔆 Video
-    
-                        <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده نود از ربات </a>
-                    `,
-                    {
-                        parse_mode: "HTML",
-                        disable_web_page_preview: true
-                    }
-                );
-            } else {
-                await this.fileService.create({
-                    file_id: fileId,
-                    short_id: fileShortId,
-                    type: FILE_TYPES.VIDEO,
-                });
-
-                this.bot.sendMessage(
-                    this.mainChannelId,
-                    `
-                        🔆 ${(
-                            (message.reply_to_message.video
-                                .file_size as number) /
-                            (1024 * 1024)
-                        ).toFixed(2)} MB
-    
-                        <a href="https://t.me/NudeLean_Bot?start=${fileShortId}">📥 مشاهده ویدیو از ربات </a>
-                    `,
-                    {
-                        parse_mode: "HTML",
-                        disable_web_page_preview: true
-                    }
-                );
-            }
-        }
     }
 }
 

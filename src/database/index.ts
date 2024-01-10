@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 import { DATABASE_MODELS } from "../utils/constant";
 import { UserSchema } from "./schemas/User";
 import { ChannelSchema } from "./schemas/Channel";
-import { FileSchema } from "./schemas/File";
+import { BidOrderSchema } from "./schemas/BidOrder";
+import { AccountSchema } from "./schemas/Account";
+import { BidSchema } from "./schemas/Bid";
 
 config();
 
@@ -27,5 +29,7 @@ export async function startDatabase() {
 function setModels() {
     mongoose.model(DATABASE_MODELS.USER, UserSchema);
     mongoose.model(DATABASE_MODELS.CHANNEL, ChannelSchema);
-    mongoose.model(DATABASE_MODELS.FILE, FileSchema);
+    mongoose.model(DATABASE_MODELS.BID, BidSchema);
+    mongoose.model(DATABASE_MODELS.BID_ORDER, BidOrderSchema);
+    mongoose.model(DATABASE_MODELS.ACCOUNT, AccountSchema);
 }

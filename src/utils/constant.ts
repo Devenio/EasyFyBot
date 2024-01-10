@@ -1,7 +1,9 @@
 export const enum DATABASE_MODELS {
     USER = "User",
     CHANNEL = "Channel",
-    FILE = "File",
+    BID = "Bid",
+    BID_ORDER = "BidOrder",
+    ACCOUNT = "Account",
 }
 
 export const enum KEYBOARD_BUTTON_TEXT {
