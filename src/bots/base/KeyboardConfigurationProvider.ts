@@ -1,4 +1,4 @@
-import { Message } from "node-telegram-bot-api";
+import { KeyboardButton, Message } from "node-telegram-bot-api";
 import { IBotKeyboardButton, IKeyboardLayout } from "./Keyboard";
 import TelegramBotType from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
@@ -7,13 +7,17 @@ const osu = require("node-os-utils");
 const os = require("os");
 
 export const enum KEYBOARD_BUTTON_TEXT {
+    BID_ACCOUNTS_LIST = "💰 مشاهده اکانت های مزایده 💰",
+
     MANAGEMENT = "مدیریت ☕️",
     SERVER_STATUS = "وضعیت سرور 📡",
     BOT_STATISTICS = "آمار ربات 📈",
     EXIT_ADMIN_PANEL = "خروج از پنل ❌",
 }
 
-enum KEYBOARD_LAYOUTS {
+export enum KEYBOARD_LAYOUTS {
+    USER_MAIN = "USER_MAIN",
+
     ADMIN_MAIN = "ADMIN_MAIN",
     ADMIN_MANAGEMENT = "ADMIN_MANAGEMENT",
 }
@@ -31,40 +35,58 @@ export class KeyboardConfigurationProvider {
 
     constructor(private botInstance: TelegramBotType) {
         this.layouts = {
-            [KEYBOARD_LAYOUTS.ADMIN_MAIN]: [
-                [
-                    {
-                        text: KEYBOARD_BUTTON_TEXT.MANAGEMENT,
-                        callbackMessage: "به پنل ادمین خوش اومدی.",
-                        isAdminButton: true,
-                        subLayoutId: KEYBOARD_LAYOUTS.ADMIN_MANAGEMENT,
-                    },
-                ],
-            ],
-            [KEYBOARD_LAYOUTS.ADMIN_MANAGEMENT]: [
-                [
-                    {
-                        text: KEYBOARD_BUTTON_TEXT.SERVER_STATUS,
-                        callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_SERVER_STATUS,
-                        isAdminButton: true,
-                    },
-                ],
-                [
-                    {
-                        text: KEYBOARD_BUTTON_TEXT.BOT_STATISTICS,
-                        callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_BOT_STATISTICS,
-                        isAdminButton: true,
-                    },
-                ],
-                [
-                    {
-                        text: KEYBOARD_BUTTON_TEXT.EXIT_ADMIN_PANEL,
-                        callbackMessage: "از پنل ادمین خارج شدید.",
-                        isAdminButton: true,
-                        subLayoutId: KEYBOARD_LAYOUTS.ADMIN_MAIN,
-                    },
-                ],
-            ],
+            [KEYBOARD_LAYOUTS.USER_MAIN]: () => {
+                return [
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.BID_ACCOUNTS_LIST,
+                            callbackMessage: "adasdsads",
+                            subLayoutId: KEYBOARD_LAYOUTS.ADMIN_MANAGEMENT,
+                        },
+                    ],
+                ];
+            },
+            [KEYBOARD_LAYOUTS.ADMIN_MAIN]: () => {
+                return [
+                    ...this.layouts[KEYBOARD_LAYOUTS.USER_MAIN](),
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.MANAGEMENT,
+                            callbackMessage: "به پنل ادمین خوش اومدی.",
+                            isAdminButton: true,
+                            subLayoutId: KEYBOARD_LAYOUTS.ADMIN_MANAGEMENT,
+                        },
+                    ],
+                ];
+            },
+            [KEYBOARD_LAYOUTS.ADMIN_MANAGEMENT]: () => {
+                return [
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.SERVER_STATUS,
+                            callbackId:
+                                KEYBOARD_BUTTON_CALLBACKS.ON_SERVER_STATUS,
+                            isAdminButton: true,
+                        },
+                    ],
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.BOT_STATISTICS,
+                            callbackId:
+                                KEYBOARD_BUTTON_CALLBACKS.ON_BOT_STATISTICS,
+                            isAdminButton: true,
+                        },
+                    ],
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.EXIT_ADMIN_PANEL,
+                            callbackMessage: "از پنل ادمین خارج شدید.",
+                            isAdminButton: true,
+                            subLayoutId: KEYBOARD_LAYOUTS.ADMIN_MAIN,
+                        },
+                    ],
+                ];
+            },
         };
 
         this.callbacks = new Map<
@@ -83,7 +105,13 @@ export class KeyboardConfigurationProvider {
     }
 
     getLayout(layoutId: string): IBotKeyboardButton[][] {
-        return this.layouts[layoutId];
+        return this.layouts[layoutId]();
+    }
+
+    getLayoutKeyboards(layoutId: string): KeyboardButton[][] {
+        return this.layouts[layoutId]().map((layout) =>
+            layout.map((keyboard) => ({ text: keyboard.text }))
+        );
     }
 
     getCallback(callbackId: string): Function | undefined {
@@ -99,7 +127,7 @@ export class KeyboardConfigurationProvider {
     }
 
     registerLayout(layoutId: string, layout: IBotKeyboardButton[][]): void {
-        this.layouts[layoutId] = layout;
+        this.layouts[layoutId] = () => layout;
     }
 
     registerCallback(callbackId: string, callback: Function): void {

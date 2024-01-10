@@ -8,12 +8,10 @@ import { ChannelService } from "../../database/services/channel.service";
 import { UserService } from "../../database/services/user.service";
 import {
     CALLBACK_QUERY,
-    KEYBOARD_BUTTON_TEXT,
-    REGEX,
+    KEYBOARD_BUTTON_TEXT
 } from "../../utils/constant";
-import { generateRandomString } from "../../utils/random";
 import { Keyboard } from "./Keyboard";
-import { KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
+import { KEYBOARD_LAYOUTS, KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
 
 const TelegramBot = require("node-telegram-bot-api");
 const cloneDeep = require("lodash.clonedeep");
@@ -235,9 +233,8 @@ export default abstract class BotFather {
         };
 
         if (isAdmin) {
-            replyMarkup.keyboard.push([
-                { text: KEYBOARD_BUTTON_TEXT.MANAGEMENT },
-            ]);
+            const adminKeyboardLayout = this.keyboardConfig.getLayoutKeyboards(KEYBOARD_LAYOUTS.ADMIN_MAIN)
+            replyMarkup.keyboard = adminKeyboardLayout;
         }
 
         return replyMarkup;

@@ -10,9 +10,9 @@ export interface IBotKeyboardButton extends KeyboardButton {
     callbackId?: string;
     subLayoutId?: string;
 }
-
+type KeyboardLayoutFunction = () => IBotKeyboardButton[][];
 export interface IKeyboardLayout {
-    [key: string]: IBotKeyboardButton[][];
+    [key: string]: KeyboardLayoutFunction;
 }
 
 export class Keyboard {
@@ -29,7 +29,7 @@ export class Keyboard {
         const layouts = Object.values(this.layouts);
 
         for (const layout of layouts) {
-            layout.forEach((keyboardRow) => {
+            layout().forEach((keyboardRow) => {
                 this.setButtonListener(keyboardRow);
             });
         }
@@ -45,7 +45,7 @@ export class Keyboard {
                 }
                 if (button.callbackMessage) {
                     const buttonSubLayout = button.subLayoutId
-                        ? this.layouts[button.subLayoutId]
+                        ? this.layouts[button.subLayoutId]()
                         : [];
 
                     const callback = (message: Message) => {
