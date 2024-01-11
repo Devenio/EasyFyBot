@@ -1,6 +1,5 @@
 import { DATABASE_MODELS } from "../../utils/constant";
 import { BidSchema, BidSchemaType } from "../schemas/Bid";
-import { ChannelSchema } from "../schemas/Channel";
 import { BaseService } from "./base.service";
 
 export class BidService extends BaseService<BidSchemaType> {
@@ -12,11 +11,10 @@ export class BidService extends BaseService<BidSchemaType> {
     }
 
     findActiveBids() {
-        const now = new Date();
-
+        const currentDate = new Date();
+    
         return this.find({
-            start_date: { $lte: now.getTime() },
-            expired_date: { $gte: now }
-        })
+            is_active: true
+        });
     }
 }

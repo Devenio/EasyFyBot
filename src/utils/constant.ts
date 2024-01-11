@@ -17,6 +17,7 @@ export const enum CALLBACK_QUERY {
     JOINED_CHANNELS = "JOINED_CHANNELS",
     LIKE = "LIKE_",
     DOWNLOAD = "DOWNLOAD",
+    LIST_BID_ACCOUNTS = "LIST_BID_ACCOUNTS"
 }
 
 export const REGEX = {
