@@ -293,7 +293,7 @@ export class KeyboardConfigurationProvider {
             const expireDate = moment(bid.expired_date).format(
                 "YYYY/MM/DD - HH:mm"
             );
-            const message = `⚡️ ${bid.title}\n\n📊 تعداد اکانت های مزایده: ${bid.accounts.length}\n\n⏱ تاریخ شروع مزایده: \n${startDate}\n⏱ تاریخ پایان مزایده: \n${expireDate}`;
+            const message = `⚡️ مزایده شماره ${bid.bid_id}\n\n📊 تعداد اکانت های مزایده: ${bid.accounts.length}\n\n⏱ تاریخ شروع مزایده: \n${startDate}\n⏱ تاریخ پایان مزایده: \n${expireDate}`;
 
             this.botInstance.sendMessage(chatId, message, {
                 reply_markup: {

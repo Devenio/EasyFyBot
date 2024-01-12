@@ -12,6 +12,10 @@ import {
     KEYBOARD_LAYOUTS,
     KeyboardConfigurationProvider,
 } from "./KeyboardConfigurationProvider";
+import { BidService } from "../../database/services/bid.service";
+import { AVAILABLE_PROP_FIRMS, AccountSchemaType } from "../../database/schemas/Account";
+import { BidOrderService } from "../../database/services/bidOrder.service";
+import { AccountService } from "../../database/services/account.service";
 
 const TelegramBot = require("node-telegram-bot-api");
 const cloneDeep = require("lodash.clonedeep");
@@ -19,6 +23,9 @@ const cloneDeep = require("lodash.clonedeep");
 export default abstract class BotFather {
     private readonly userService = new UserService();
     private readonly channelService = new ChannelService();
+    private readonly bidService = new BidService();
+    private readonly bidOrderService = new BidOrderService();
+    private readonly accountService = new AccountService();
 
     // if false video and photos will directly send to channel
     private isOnSaveMode = true;
@@ -186,6 +193,40 @@ export default abstract class BotFather {
                     text: "هنوز که عضو نشدی🫠",
                 });
             }
+        }
+
+        if(callbackQuery.data?.startsWith(CALLBACK_QUERY.LIST_BID_ACCOUNTS)) {
+            const bidId = callbackQuery.data.substring(CALLBACK_QUERY.LIST_BID_ACCOUNTS.length);
+
+
+            const bidWithAccounts =  await this.bidService.findBidAccounts(bidId)
+
+            if(!bidWithAccounts) return;
+
+            this.bot.answerCallbackQuery(callbackQuery.id, {
+                text: "نمایش اکانت های مزایده "
+            });
+
+            await this.bot.sendMessage(chatId, `◀️ لیست اکانت های مزایده شماره ${bidWithAccounts?.bid_id}:`);
+
+            bidWithAccounts.accounts.forEach(async (acc) => {
+                const account = (acc as unknown as AccountSchemaType);
+                const propfirms = {
+                    [AVAILABLE_PROP_FIRMS.SGB]: "سرمایه گذار برتر",
+                    [AVAILABLE_PROP_FIRMS.PROPIY]: "پراپی",
+                    [AVAILABLE_PROP_FIRMS.TAMIN_SARMAYE]: "تامین سرمایه",
+                }
+                const propfirm = propfirms[account.prop_firm];
+                const fund = account.fund.toLocaleString();
+                const minBidPrice = account.min_bid_price.toLocaleString();
+
+                // @ts-ignore
+                const highestBidPrice = await this.accountService.findHighestBidPrice(account._id);
+
+                const message = `◀️ پراپ فرم: ${propfirm}\n◀️ سرمایه: ${fund} دلار\n\n🟢 حداقل قیمت پیشنهادی: ${minBidPrice} تتر\n🟢 بالاترین قیمت پیشنهاد شده تا الان: ${highestBidPrice} تتر`
+
+                this.bot.sendMessage(chatId, message);
+            })
         }
     }
 

@@ -3,13 +3,16 @@ import mongoose, {
     FilterQuery,
     IfAny,
     Model,
+    ObjectIdExpression,
     Require_id,
     Schema,
+    Types,
 } from "mongoose";
 import { DATABASE_MODELS } from "../../utils/constant";
 import { ObjectId } from "mongoose";
 import { UpdateQuery } from "mongoose";
 import { QueryOptions } from "mongoose";
+import { ServerMonitoringMode } from "mongodb";
 
 export abstract class BaseService<SCHEMA_TYPE> {
     private readonly schema: Schema;
@@ -35,6 +38,15 @@ export abstract class BaseService<SCHEMA_TYPE> {
             return response;
         } catch (error) {
             console.error("Unable to find: ", error);
+        }
+    }
+
+    async findById(id: string) {
+        try {
+            const response = await this.collection.findById(id);
+            return response;
+        } catch (error) {
+            console.error("Unable to find by id: ", error);
         }
     }
 

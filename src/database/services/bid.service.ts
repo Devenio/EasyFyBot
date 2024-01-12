@@ -11,10 +11,18 @@ export class BidService extends BaseService<BidSchemaType> {
     }
 
     findActiveBids() {
-        const currentDate = new Date();
-    
         return this.find({
-            is_active: true
+            is_active: true,
         });
+    }
+
+    findBidAccounts(bidId: string) {
+        return this.collection
+            .findById(bidId)
+            .populate({
+                path: "accounts",
+                model: "Account",
+            })
+            .exec()
     }
 }
