@@ -18,7 +18,6 @@ export async function startDatabase() {
                 `mongodb://${DB_USERNAME}:${DB_PASSWORD}@127.0.0.1:27017/${DB_NAME}?directConnection=true&serverSelectionTimeoutMS=2000&authSource=admin`
         );
 
-        console.log("Connected to Database ✅");
         setModels();
     } catch (error) {
         console.error("Unable to connect to Database ❌");

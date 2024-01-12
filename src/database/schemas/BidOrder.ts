@@ -6,6 +6,7 @@ export const BidOrderSchema = new mongoose.Schema({
     bid_price: { type: Number, required: false },
     is_valid: { type: Boolean, default: false, required: false },
     created_date: { type: Date, default: Date.now, required: false },
+    updated_date: { type: Date, default: Date.now, required: false },
 });
 
 export type BidOrderSchemaType = InferSchemaType<typeof BidOrderSchema>;

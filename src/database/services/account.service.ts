@@ -22,8 +22,6 @@ export class AccountService extends BaseService<AccountSchemaType> {
                     options: { sort: { bid_price: -1 }, limit: 1 },
                 });
 
-                console.log(account);
-
             if (!account) {
                 throw new Error("Account not found");
             }
