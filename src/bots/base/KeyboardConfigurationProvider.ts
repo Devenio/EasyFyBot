@@ -20,6 +20,7 @@ export const enum KEYBOARD_BUTTON_TEXT {
 
     BID_ACCOUNTS_LIST = "💰 مشاهده مزایده های فعال 💰",
     SHARE_CONTACT = " ارسال شماره 📱",
+    SUPPORT = "👤 ارتباط با پشتیبانی",
 
     BID_MANAGEMENT = "مدیریت مزایده 💸",
     CREATE_ACCOUNT = "ساخت اکانت جدید",
@@ -44,6 +45,7 @@ enum KEYBOARD_BUTTON_CALLBACKS {
     ON_SERVER_STATUS = "ON_SERVER_STATUS",
     ON_BOT_STATISTICS = "ON_BOT_STATISTICS",
     ON_BID_LISTS = "ON_BID_LISTS",
+    ON_SUPPORT = "ON_SUPPORT",
     ON_CREATE_ACCOUNT = "ON_CREATE_ACCOUNT",
     BACK_TO_HOME = "BACK_TO_HOME",
 }
@@ -75,6 +77,12 @@ export class KeyboardConfigurationProvider {
                         {
                             text: KEYBOARD_BUTTON_TEXT.BID_ACCOUNTS_LIST,
                             callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_BID_LISTS,
+                        },
+                    ],
+                    [
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.SUPPORT,
+                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT,
                         },
                     ],
                 ];
@@ -172,6 +180,10 @@ export class KeyboardConfigurationProvider {
             [
                 KEYBOARD_BUTTON_CALLBACKS.ON_CREATE_ACCOUNT,
                 this.onCreateAccount.bind(this),
+            ],
+            [
+                KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT,
+                this.onSupport.bind(this),
             ],
             [
                 KEYBOARD_BUTTON_CALLBACKS.BACK_TO_HOME,
@@ -337,6 +349,13 @@ export class KeyboardConfigurationProvider {
             {
                 reply_markup: replyMarkup,
             }
+        );
+    }
+
+    private async onSupport(message: Message) {
+        this.botInstance.sendMessage(
+            message.chat.id,
+            "❗️ برای ارتباط با پشتیبانی به آیدی زیر پیام بدید:\n🆔 @BLPMaster_Support"
         );
     }
 }
