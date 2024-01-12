@@ -135,11 +135,7 @@ export default abstract class BotFather {
     private async onText(message: Message) {
         const { id: chatId, username, first_name } = message.chat;
 
-        this.userService.addOrReplace(
-            chatId,
-            username || "",
-            first_name || ""
-        );
+        this.userService.addOrReplace(chatId, username || "", first_name || "");
 
         const notJoinedChannels = await this.checkLockedChannels(chatId);
         if (notJoinedChannels.length) {
@@ -161,13 +157,15 @@ export default abstract class BotFather {
         }
 
         const numberRegex = /^[0-9]+$/;
-        if(numberRegex.test(message.text || '')) {
-            if(!this.selectedAccountId) return;
+        if (numberRegex.test(message.text || "")) {
+            if (!this.selectedAccountId) return;
             const bidPrice = +(message.text || 0);
 
-            const account = await this.accountService.findById(this.selectedAccountId);
-            
-            if(!account) return;
+            const account = await this.accountService.findById(
+                this.selectedAccountId
+            );
+
+            if (!account) return;
 
             const propfirms = {
                 [AVAILABLE_PROP_FIRMS.SGB]: "سرمایه گذار برتر",
@@ -176,39 +174,60 @@ export default abstract class BotFather {
             };
             const propfirm = propfirms[account.prop_firm];
 
-            if(bidPrice < account.min_bid_price) {
-                this.bot.sendMessage(chatId, `
+            if (bidPrice < account.min_bid_price) {
+                this.bot.sendMessage(
+                    chatId,
+                    `
 ❌ قیمت پیشنهادی شما نمیتوانید از حداقل قیمت پیشنهادی اکانت کمتر باشد.
 
 ◀️ حداقل قیمت پیشنهادی برای این اکانت: ${account.min_bid_price.toLocaleString()} تتر
-                `)
+                `
+                );
 
                 return;
             }
 
-            const bidOrder = await this.bidOrderService.findAccountBidOrder(chatId, this.selectedAccountId);
-            if(!bidOrder) {
-                await this.bidOrderService.addNewOrder(chatId, this.selectedAccountId, bidPrice);
+            const bidOrder = await this.bidOrderService.findAccountBidOrder(
+                chatId,
+                this.selectedAccountId
+            );
+            if (!bidOrder) {
+                await this.bidOrderService.addNewOrder(
+                    chatId,
+                    this.selectedAccountId,
+                    bidPrice
+                );
 
-                
-
-                this.bot.sendMessage(chatId, `✅ پیشنهاد شما به قیمت ${bidPrice.toLocaleString()} تتر روی اکانت ${account.fund.toLocaleString()} دلاری پراپ فرم ${propfirm} ثبت شد.`);
+                this.bot.sendMessage(
+                    chatId,
+                    `✅ پیشنهاد شما به قیمت ${bidPrice.toLocaleString()} تتر روی اکانت ${account.fund.toLocaleString()} دلاری پراپ فرم ${propfirm} ثبت شد.`
+                );
 
                 this.selectedAccountId = "";
                 return;
             }
-            
-            if(bidOrder && bidOrder?.bid_price && bidOrder?.bid_price > bidPrice) {
-                this.bot.sendMessage(chatId, `
+
+            if (
+                bidOrder &&
+                bidOrder?.bid_price &&
+                bidOrder?.bid_price > bidPrice
+            ) {
+                this.bot.sendMessage(
+                    chatId,
+                    `
 ❌ پیشنهاد شما باید از بیشترین قیمت پیشنهاد شده توسط خودتان، بیشتر باشد.
 
 ◀️ بیشترین قیمت پیشنهادی شما: ${bidOrder.bid_price} تتر
-                `)
+                `
+                );
                 return;
             }
 
             await this.bidOrderService.updateOrder(bidOrder._id, bidPrice);
-            this.bot.sendMessage(chatId, `✅ پیشنهاد شما به قیمت ${bidPrice.toLocaleString()} تتر روی اکانت ${account.fund.toLocaleString()} دلاری پراپ فرم ${propfirm} ثبت شد.`);
+            this.bot.sendMessage(
+                chatId,
+                `✅ پیشنهاد شما به قیمت ${bidPrice.toLocaleString()} تتر روی اکانت ${account.fund.toLocaleString()} دلاری پراپ فرم ${propfirm} ثبت شد.`
+            );
         }
     }
 
@@ -291,7 +310,10 @@ export default abstract class BotFather {
                     // @ts-ignore
                     await this.accountService.findHighestBidPrice(account._id);
 
-                const message = `◀️ پراپ فرم: ${propfirm}\n◀️ سرمایه: ${fund} دلار\n\n🟢 حداقل قیمت پیشنهادی: ${minBidPrice} تتر\n🟢 بالاترین قیمت پیشنهاد شده تا الان: ${highestBidPrice} تتر`;
+                const highestBidPriceMessage = highestBidPrice
+                    ? `${highestBidPrice} تتر`
+                    : "پیشنهادی ثبت نشده";
+                const message = `◀️ پراپ فرم: ${propfirm}\n◀️ سرمایه: ${fund} دلار\n\n🟢 حداقل قیمت پیشنهادی: ${minBidPrice} تتر\n🟢 بالاترین قیمت پیشنهاد شده تا الان: ${highestBidPriceMessage}`;
 
                 this.bot.sendMessage(chatId, message, {
                     reply_markup: {
@@ -315,6 +337,10 @@ export default abstract class BotFather {
                 CALLBACK_QUERY.BID_ON.length
             );
 
+            this.bot.answerCallbackQuery(callbackQuery.id, {
+                text: "ثبت پیشنهاد",
+            });
+
             this.selectedAccountId = accountId;
 
             const account = await this.accountService.findById(accountId);
@@ -333,9 +359,7 @@ export default abstract class BotFather {
 
 📔 قبل از ثبت پیشنهاد نکات زیر رو مطالعه کنید: 
 ❗️  لطفا فقط یک عدد در واحد تتر وارد کنید. مثال: 250
-❗️ قیمت  پیشنهادی شما نمیتواند کمتر از ${
-    account.min_bid_price.toLocaleString()
-} تتر باشد.
+❗️ قیمت  پیشنهادی شما نمیتواند کمتر از ${account.min_bid_price.toLocaleString()} تتر باشد.
 ❗️ در صورت وارد کردن بیشترین پیشنهاد و برنده شدن در مزایده و پرداخت نکردن هزینه به مدت 1 ماه از بات بن میشوید پس قبل از ثبت پیشنهاد دقت کنید.
 ❗️ میتوانید قیمت پیشنهادی کمتری از بالاترین قیمت پیشنهاد شده داشته باشید و در صورت پرداخت نشدن پیشنهاد های بالاتر شانس در بردن مزایده داشته باشید.
 ❗️ در صورت وارد کردن قیمت پیشنهادی بیش از یک بار، بالاترین قیمت پیشنهادی شما ثبت میشود.
