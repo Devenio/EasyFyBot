@@ -37,6 +37,7 @@ export default abstract class BotFather {
     private readonly token: string = "";
     private botKeyboards: Keyboard | null = null;
     private adminChatIds: number[] = [];
+    private banUsersChatIds: number[] = [];
 
     private selectedAccountId = "";
 
@@ -90,6 +91,12 @@ export default abstract class BotFather {
         this.botKeyboards?.setAdmins(adminChatIds);
     }
 
+    private async updateBanUsers() {
+        const banUsers = await this.getBanUsersChatIds();
+        this.banUsersChatIds = banUsers;
+        this.botKeyboards?.setBanUsers(banUsers);
+    }
+
     private async getAdminChatIds() {
         const admins = await this.userService.getAdmins();
 
@@ -97,6 +104,15 @@ export default abstract class BotFather {
             return [];
         }
         return admins?.map((admin) => admin.chat_id);
+    }
+
+    private async getBanUsersChatIds() {
+        const banUsers = await this.userService.getBanUsers();
+
+        if (!banUsers) {
+            return [];
+        }
+        return banUsers?.map((admin) => admin.chat_id);
     }
 
     // Events
@@ -145,6 +161,7 @@ export default abstract class BotFather {
 
         if (message.text === "/start") {
             this.updateAdmins();
+            this.updateBanUsers();
             const replyMarkups = await this.getStartReplyMarkups(message);
             this.onStart(message, replyMarkups);
         }

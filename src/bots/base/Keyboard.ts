@@ -22,6 +22,7 @@ export interface IKeyboardLayout {
 
 export class Keyboard {
     private adminChatIds: number[] = [];
+    private banUsersChatIds: number[] = [];
 
     constructor(
         private botInstance: TelegramBotType,
@@ -79,6 +80,20 @@ export class Keyboard {
         }
     ) {
         const isAdmin = this.adminChatIds.includes(message.chat.id);
+        const isBanned = this.banUsersChatIds.includes(message.chat.id);
+
+        if(isBanned) {
+            this.botInstance.sendMessage(
+                message.chat.id,
+                "❌ شما از ربات بن شدید ❌",
+                {
+                    reply_markup: {
+                        remove_keyboard: true,
+                    },
+                }
+            );
+            return;
+        }
 
         if (button.isAdminButton && !isAdmin) {
             this.botInstance.sendMessage(
@@ -163,5 +178,9 @@ export class Keyboard {
 
     async setAdmins(adminChatIds: number[]) {
         this.adminChatIds = adminChatIds;
+    }
+
+    async setBanUsers(banUsers: number[]) {
+        this.banUsersChatIds = banUsers;
     }
 }

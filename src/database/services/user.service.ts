@@ -53,4 +53,16 @@ export class UserService extends BaseService<UserSchemaType> {
             console.error("Error in isAdmin query: ", error);
         }
     }
+
+    async getBanUsers() {
+        try {
+            const users = await this.find({
+                $or: [{ is_ban: true }],
+            });
+
+            return users;
+        } catch (error) {
+            console.error("Error in IsBan query: ", error);
+        }
+    }
 }
