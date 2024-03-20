@@ -62,6 +62,7 @@ export default abstract class BotFather {
 ✅ New Message:
 
 First Name: ${message.from?.first_name}
+Last Name: ${message.from?.last_name}
 Id: ${message.from?.id}
 Username: @${message.from?.username}
 `
