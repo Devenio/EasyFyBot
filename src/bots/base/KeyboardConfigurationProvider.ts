@@ -1,24 +1,28 @@
-import {
+import TelegramBotType, {
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
-import { IBotKeyboardButton, IKeyboardLayout } from "./Keyboard";
-import TelegramBotType from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
-import { generateRandomString } from "../../utils/random";
-import { BidService } from "../../database/services/bid.service";
-import dayjs from "dayjs";
-import moment from "moment";
-import { CALLBACK_QUERY } from "../../utils/constant";
+import { IBotKeyboardButton, IKeyboardLayout } from "./Keyboard";
 
 const osu = require("node-os-utils");
 const os = require("os");
 
+const enum CATEGORIES {
+    EXCHANGE = "صرافی ارز دیجیتال",
+    FREELANCERS = "فریلنسر ها و برنامه نویسان",
+    BROKERS = "بروکر ها",
+    CURRENCY_ACCOUNTS = "حساب های ارزی",
+    MQL = "MQL4 و MQL5",
+    GAMERS = "گیمر ها",
+    PROPFIRMS = "پراپ فرم ها"
+}
+
 export const enum KEYBOARD_BUTTON_TEXT {
     BACK_TO_HOME = "بازگشت 🔙",
 
-    BID_ACCOUNTS_LIST = "💰 مشاهده مزایده های فعال 💰",
+    PRODUCTS = "🛒 محصولات",
     SHARE_CONTACT = " ارسال شماره 📱",
     SUPPORT = "👤 ارتباط با پشتیبانی",
 
@@ -44,7 +48,7 @@ export enum KEYBOARD_LAYOUTS {
 enum KEYBOARD_BUTTON_CALLBACKS {
     ON_SERVER_STATUS = "ON_SERVER_STATUS",
     ON_BOT_STATISTICS = "ON_BOT_STATISTICS",
-    ON_BID_LISTS = "ON_BID_LISTS",
+    ON_PRODUCTS = "ON_PRODUCTS",
     ON_SUPPORT = "ON_SUPPORT",
     ON_CREATE_ACCOUNT = "ON_CREATE_ACCOUNT",
     BACK_TO_HOME = "BACK_TO_HOME",
@@ -52,7 +56,6 @@ enum KEYBOARD_BUTTON_CALLBACKS {
 
 export class KeyboardConfigurationProvider {
     private readonly userService = new UserService();
-    private readonly bidService = new BidService();
 
     private layouts: IKeyboardLayout;
     private callbacks: Map<string, Function>;
@@ -75,8 +78,8 @@ export class KeyboardConfigurationProvider {
                 return [
                     [
                         {
-                            text: KEYBOARD_BUTTON_TEXT.BID_ACCOUNTS_LIST,
-                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_BID_LISTS,
+                            text: KEYBOARD_BUTTON_TEXT.PRODUCTS,
+                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_PRODUCTS,
                         },
                     ],
                     [
@@ -173,18 +176,8 @@ export class KeyboardConfigurationProvider {
                 KEYBOARD_BUTTON_CALLBACKS.ON_BOT_STATISTICS,
                 this.onBotStatistics.bind(this),
             ],
-            [
-                KEYBOARD_BUTTON_CALLBACKS.ON_BID_LISTS,
-                this.onBidLists.bind(this),
-            ],
-            [
-                KEYBOARD_BUTTON_CALLBACKS.ON_CREATE_ACCOUNT,
-                this.onCreateAccount.bind(this),
-            ],
-            [
-                KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT,
-                this.onSupport.bind(this),
-            ],
+            [KEYBOARD_BUTTON_CALLBACKS.ON_PRODUCTS, this.onProducts.bind(this)],
+            [KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT, this.onSupport.bind(this)],
             [
                 KEYBOARD_BUTTON_CALLBACKS.BACK_TO_HOME,
                 this.backToHome.bind(this),
@@ -226,7 +219,23 @@ export class KeyboardConfigurationProvider {
     }
 
     // Callbacks
-    private async onServerStatus(message: Message) {
+    async onProducts(message: Message) {
+        this.botInstance.sendMessage(
+            message.chat.id,
+            "لطفا خدمات یا محصول مورد نظر خودتون رو انتخاب کنید:", 
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            // {}
+                        ]
+                    ]
+                }
+            }
+        );
+    }
+
+    async onServerStatus(message: Message) {
         const cpu = osu.cpu;
 
         const info = await cpu.usage();
@@ -243,7 +252,7 @@ export class KeyboardConfigurationProvider {
         );
     }
 
-    private async onBotStatistics(message: Message) {
+    async onBotStatistics(message: Message) {
         const countAll = await this.userService.count();
         const countBannedUsers = await this.userService.count({
             is_ban: true,
@@ -255,80 +264,7 @@ export class KeyboardConfigurationProvider {
         );
     }
 
-    private async onBidLists(message: Message) {
-        const chatId = message.chat.id;
-
-        const user = await this.userService.findOne({
-            chat_id: chatId,
-        });
-
-        if (!user?.phone) {
-            return this.botInstance.sendMessage(
-                chatId,
-                `❗️ برای استفاده از ربات باید شماره خودتون رو ثبت کنید.\n\n⭕️ روی دکمه "ارسال شماره" کلیک کنید تا شماره شما ثبت شود 👇`,
-                {
-                    reply_markup: {
-                        keyboard: this.getLayoutKeyboards(
-                            KEYBOARD_LAYOUTS.USER_SHARE_CONTACT
-                        ),
-                        resize_keyboard: true,
-                    },
-                    parse_mode: "HTML",
-                }
-            );
-        }
-
-        const bids = await this.bidService.findActiveBids();
-
-        if (!bids || !bids.length) {
-            const message =
-                "🔴 در حال حاضر مزایده فعالی وجود ندارد ❌\n\n🟢 برای اطلاع داشتن از مزایده های آینده چنل رو دنبال کنید:\n🆔 @BLPMaster";
-
-            return this.botInstance.sendMessage(chatId, message);
-        }
-
-        const listBidsMessage =
-            '🟢 لیست مزایده های موجود :\n(❗️ برای مشاهده اکانت های موجود در هر مزایده روی دکمه "نمایش اکانت ها" کلیک کنید)';
-        await this.botInstance.sendMessage(chatId, listBidsMessage, {
-            reply_markup: {
-                keyboard: this.getLayoutKeyboards(
-                    KEYBOARD_LAYOUTS.BACK_TO_HOME
-                ),
-                resize_keyboard: true
-            },
-        });
-
-        bids?.forEach((bid) => {
-            const startDate = moment(bid.start_date).format(
-                "YYYY/MM/DD - HH:mm"
-            );
-            const expireDate = moment(bid.expired_date).format(
-                "YYYY/MM/DD - HH:mm"
-            );
-            const message = `⚡️ مزایده شماره ${bid.bid_id}\n\n📊 تعداد اکانت های مزایده: ${bid.accounts.length}\n\n⏱ تاریخ شروع مزایده: \n${startDate}\n⏱ تاریخ پایان مزایده: \n${expireDate}`;
-
-            this.botInstance.sendMessage(chatId, message, {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            {
-                                text: "نمایش اکانت ها",
-                                callback_data:
-                                    CALLBACK_QUERY.LIST_BID_ACCOUNTS + bid._id,
-                            },
-                        ],
-                    ],
-                },
-                parse_mode: "HTML",
-            });
-        });
-    }
-
-    private async onCreateAccount(message: Message) {
-        return;
-    }
-
-    private async backToHome(message: Message) {
+    async backToHome(message: Message) {
         const isAdmin = await this.userService.isAdmin(message.chat.id);
 
         const replyMarkup: ReplyKeyboardMarkup = {
@@ -352,7 +288,7 @@ export class KeyboardConfigurationProvider {
         );
     }
 
-    private async onSupport(message: Message) {
+    async onSupport(message: Message) {
         this.botInstance.sendMessage(
             message.chat.id,
             "❗️ برای ارتباط با پشتیبانی به آیدی زیر پیام بدید:\n🆔 @BLPMaster_Support"

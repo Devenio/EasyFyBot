@@ -1,12 +1,11 @@
 // TODO: add services to an index for importing
+import { config } from "dotenv";
 import TelegramBotType, {
     CallbackQuery,
-    Message,
-    ReplyKeyboardMarkup,
+    Message
 } from "node-telegram-bot-api";
 import { Keyboard } from "./Keyboard";
 import { KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
-import { config } from "dotenv";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -47,30 +46,6 @@ export default abstract class BotFather {
     private async onMessage(message: Message) {
         if (message.text === "/start") return;
 
-        const adminIds = process.env.ADMIN_IDS?.split(",");
-        const { bot } = this;
-
-        bot.sendMessage(
-            message.chat.id,
-            "پیام شما با موفقیت ارسال شد ✅\n\n از حالا هر پیامی که ارسال کنید برای نودلین ارسال میشه."
-        );
-
-        adminIds?.forEach(async (adminId) => {
-            await bot.sendMessage(
-                adminId,
-                `
-✅ New Message:
-
-First Name: ${message.from?.first_name}
-Last Name: ${message.from?.last_name}
-Id: ${message.from?.id}
-Username: @${message.from?.username}
-`
-            );
-
-            this.sendMessage(+adminId, message);
-        });
-
         return;
     }
 
@@ -104,7 +79,7 @@ Username: @${message.from?.username}
         } else if (!!message.sticker) {
             bot.sendSticker(chatId, message.sticker.file_id);
         } else {
-            bot.sendMessage(chatId, `${message}`)
+            bot.sendMessage(chatId, `${message}`);
         }
     }
 
@@ -121,24 +96,22 @@ Username: @${message.from?.username}
     }
 
     private async onText(message: Message) {
-        if (message.text === "/start") {
-            this.bot.sendMessage(
-                message.chat.id,
-                "شما در حال ارسال پیام ناشناس به نودلین هستید. پیامتون رو بفرستید:"
-            );
-        }
+        if (message.text === "/start") this.onStart(message);
     }
 
-    async onStart(message: Message, startReplyMarkups: ReplyKeyboardMarkup) {
+    async onStart(message: Message) {
         this.bot.sendMessage(
             message.chat.id,
-            `❤️‍🔥 سلام ${message.chat.first_name} به ربات مزایده اکانت های پراپ فرم تیم "@BLPMaster" خوش اومدی ❤️‍🔥`,
-            {
-                reply_markup: {
-                    ...startReplyMarkups,
-                },
-            }
+            'به فروشگاه "ایزی‌فای" خوش اومدید ❤️'
         );
+
+        // this.bot.sendMessage(
+        //     message.chat.id,
+        //     "⬅️ لطفا خدمات مورد نظر خودتون رو انتخاب کنید:",
+        //     {
+        //         reply_markup: { inline_keyboard: [] },
+        //     }
+        // );
     }
 
     private async onCallbackQuery(callbackQuery: CallbackQuery) {

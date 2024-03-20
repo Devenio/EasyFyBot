@@ -4,6 +4,8 @@ export const enum DATABASE_MODELS {
     BID = "Bid",
     BID_ORDER = "BidOrder",
     ACCOUNT = "Account",
+    PRODUCT = "Product",
+    CATEGORY = "Category"
 }
 
 export const enum KEYBOARD_BUTTON_TEXT {
