@@ -1,10 +1,12 @@
 import TelegramBotType, {
+    InlineKeyboardButton,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
 } from "node-telegram-bot-api";
 import { UserService } from "../../database/services/user.service";
 import { IBotKeyboardButton, IKeyboardLayout } from "./Keyboard";
+import { CategoryService } from "../../database/services/category.service";
 
 const osu = require("node-os-utils");
 const os = require("os");
@@ -16,13 +18,13 @@ const enum CATEGORIES {
     CURRENCY_ACCOUNTS = "حساب های ارزی",
     MQL = "MQL4 و MQL5",
     GAMERS = "گیمر ها",
-    PROPFIRMS = "پراپ فرم ها"
+    PROPFIRMS = "پراپ فرم ها",
 }
 
 export const enum KEYBOARD_BUTTON_TEXT {
     BACK_TO_HOME = "بازگشت 🔙",
 
-    PRODUCTS = "🛒 محصولات",
+    CATEGORY = "🛒 دسته بندی محصولات",
     SHARE_CONTACT = " ارسال شماره 📱",
     SUPPORT = "👤 ارتباط با پشتیبانی",
 
@@ -48,7 +50,7 @@ export enum KEYBOARD_LAYOUTS {
 enum KEYBOARD_BUTTON_CALLBACKS {
     ON_SERVER_STATUS = "ON_SERVER_STATUS",
     ON_BOT_STATISTICS = "ON_BOT_STATISTICS",
-    ON_PRODUCTS = "ON_PRODUCTS",
+    ON_CATEGORY = "ON_CATEGORY",
     ON_SUPPORT = "ON_SUPPORT",
     ON_CREATE_ACCOUNT = "ON_CREATE_ACCOUNT",
     BACK_TO_HOME = "BACK_TO_HOME",
@@ -56,6 +58,7 @@ enum KEYBOARD_BUTTON_CALLBACKS {
 
 export class KeyboardConfigurationProvider {
     private readonly userService = new UserService();
+    private readonly categoryService = new CategoryService();
 
     private layouts: IKeyboardLayout;
     private callbacks: Map<string, Function>;
@@ -78,8 +81,8 @@ export class KeyboardConfigurationProvider {
                 return [
                     [
                         {
-                            text: KEYBOARD_BUTTON_TEXT.PRODUCTS,
-                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_PRODUCTS,
+                            text: KEYBOARD_BUTTON_TEXT.CATEGORY,
+                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_CATEGORY,
                         },
                     ],
                     [
@@ -176,7 +179,10 @@ export class KeyboardConfigurationProvider {
                 KEYBOARD_BUTTON_CALLBACKS.ON_BOT_STATISTICS,
                 this.onBotStatistics.bind(this),
             ],
-            [KEYBOARD_BUTTON_CALLBACKS.ON_PRODUCTS, this.onProducts.bind(this)],
+            [
+                KEYBOARD_BUTTON_CALLBACKS.ON_CATEGORY,
+                this.onCategories.bind(this),
+            ],
             [KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT, this.onSupport.bind(this)],
             [
                 KEYBOARD_BUTTON_CALLBACKS.BACK_TO_HOME,
@@ -219,18 +225,37 @@ export class KeyboardConfigurationProvider {
     }
 
     // Callbacks
-    async onProducts(message: Message) {
+    async onCategories(message: Message) {
+        const res = await this.botInstance.sendMessage(
+            message.chat.id,
+            "در حال بارگذاری دسته بندی ها..."
+        );
+
+        const categories = await this.categoryService.find({});
+        await this.botInstance.deleteMessage(message.chat.id, res.message_id);
+
+        console.log(categories);
+
+        if (!categories) {
+            this.botInstance.sendMessage(
+                message.chat.id,
+                "مشکلی رخ داده. لطفا با پشتیبان در ارتباط باشید."
+            );
+            return;
+        }
+
         this.botInstance.sendMessage(
             message.chat.id,
-            "لطفا خدمات یا محصول مورد نظر خودتون رو انتخاب کنید:", 
+            "لطفا خدمات یا محصول مورد نظر خودتون رو انتخاب کنید:",
             {
                 reply_markup: {
-                    inline_keyboard: [
-                        [
-                            // {}
-                        ]
-                    ]
-                }
+                    inline_keyboard: categories.map((category) => [
+                        {
+                            text: category.title,
+                            callback_data: category.type,
+                        },
+                    ]),
+                },
             }
         );
     }

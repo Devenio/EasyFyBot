@@ -5,7 +5,7 @@ import TelegramBotType, {
     Message
 } from "node-telegram-bot-api";
 import { Keyboard } from "./Keyboard";
-import { KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
+import { KEYBOARD_LAYOUTS, KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -102,16 +102,14 @@ export default abstract class BotFather {
     async onStart(message: Message) {
         this.bot.sendMessage(
             message.chat.id,
-            'به فروشگاه "ایزی‌فای" خوش اومدید ❤️'
+            'به فروشگاه "ایزی‌فای" خوش اومدید ❤️',
+            {
+                reply_markup: {
+                    keyboard: this.keyboardConfig.getLayoutKeyboards(KEYBOARD_LAYOUTS.USER_MAIN),
+                    resize_keyboard: true
+                }
+            }
         );
-
-        // this.bot.sendMessage(
-        //     message.chat.id,
-        //     "⬅️ لطفا خدمات مورد نظر خودتون رو انتخاب کنید:",
-        //     {
-        //         reply_markup: { inline_keyboard: [] },
-        //     }
-        // );
     }
 
     private async onCallbackQuery(callbackQuery: CallbackQuery) {
