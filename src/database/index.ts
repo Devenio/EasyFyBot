@@ -3,49 +3,10 @@ import mongoose from "mongoose";
 import { DATABASE_MODELS } from "../utils/constant";
 import { CategorySchema, CategorySchemaType } from "./schemas/Category";
 import { ProductSchema } from "./schemas/Product";
+import { initCategories } from "./category.init";
+import { initProducts } from "./product.init";
 
 config();
-
-const enum CATEGORIES {
-    EXCHANGE = "EXCHANGE",
-    FREELANCERS = "FREELANCERS",
-    BROKERS = "BROKERS",
-    CURRENCY_ACCOUNTS = "CURRENCY_ACCOUNTS",
-    MQL = "MQL",
-    GAMERS = "GAMERS",
-    PROPFIRMS = "PROPFIRMS",
-}
-
-const initCategories = [
-    {
-        title: "صرافی ارز دیجیتال",
-        type: CATEGORIES.EXCHANGE,
-    },
-    {
-        title: "فریلنسر ها و برنامه نویسان",
-        type: CATEGORIES.FREELANCERS,
-    },
-    {
-        title: "بروکر ها",
-        type: CATEGORIES.BROKERS,
-    },
-    {
-        title: "حساب های ارزی",
-        type: CATEGORIES.CURRENCY_ACCOUNTS,
-    },
-    {
-        title: "MQL4 و MQL5",
-        type: CATEGORIES.MQL,
-    },
-    {
-        title: "گیمر ها",
-        type: CATEGORIES.GAMERS,
-    },
-    {
-        title: "پراپ فرم ها",
-        type: CATEGORIES.PROPFIRMS,
-    },
-];
 
 export async function startDatabase() {
     const { DB_URL } = process.env;
@@ -66,13 +27,28 @@ function setModels() {
         DATABASE_MODELS.CATEGORY,
         CategorySchema
     );
-    mongoose.model(DATABASE_MODELS.PRODUCT, ProductSchema);
+    const productModel = mongoose.model(DATABASE_MODELS.PRODUCT, ProductSchema);
 
+    console.log("> Initializing Database...");
     initCategories.forEach(async (category) => {
-        const isExisted = await categoryModel.findOne({ type: category.type })
-        if(!isExisted) {
-            const doc = new categoryModel({ title: category.title, type: category.type });
+        const isExisted = await categoryModel.findOne({ type: category.type });
+        if (!isExisted) {
+            const doc = new categoryModel({
+                title: category.title,
+                type: category.type,
+            });
             await doc.save();
         }
     });
+
+    initProducts.forEach(async (product) => {
+        const isExisted = await productModel.findOne({ title: product.title });
+        if (!isExisted) {
+            const doc = new productModel({ ...product });
+            await doc.save();
+        } else {
+            await productModel.updateOne({ title: product.title }, { $set: product });
+        }
+    });
+    console.log("> Completed!");
 }

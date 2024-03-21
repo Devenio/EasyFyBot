@@ -1,17 +1,22 @@
 // TODO: add services to an index for importing
 import { config } from "dotenv";
-import TelegramBotType, {
-    CallbackQuery,
-    Message
-} from "node-telegram-bot-api";
+import TelegramBotType, { CallbackQuery, Message } from "node-telegram-bot-api";
 import { Keyboard } from "./Keyboard";
-import { KEYBOARD_LAYOUTS, KeyboardConfigurationProvider } from "./KeyboardConfigurationProvider";
+import {
+    KEYBOARD_LAYOUTS,
+    KeyboardConfigurationProvider,
+} from "./KeyboardConfigurationProvider";
+import { ProductService } from "../../database/services/product.service";
 
 const TelegramBot = require("node-telegram-bot-api");
 
 config();
 
 export default abstract class BotFather {
+    productMessageId = 0;
+
+    private readonly productService = new ProductService();
+
     private readonly keyboardConfig;
     private readonly token: string = "";
     private botKeyboards: Keyboard | null = null;
@@ -105,14 +110,69 @@ export default abstract class BotFather {
             'به فروشگاه "ایزی‌فای" خوش اومدید ❤️',
             {
                 reply_markup: {
-                    keyboard: this.keyboardConfig.getLayoutKeyboards(KEYBOARD_LAYOUTS.USER_MAIN),
-                    resize_keyboard: true
-                }
+                    keyboard: this.keyboardConfig.getLayoutKeyboards(
+                        KEYBOARD_LAYOUTS.USER_MAIN
+                    ),
+                    resize_keyboard: true,
+                },
             }
         );
     }
 
     private async onCallbackQuery(callbackQuery: CallbackQuery) {
+        if (callbackQuery.data?.startsWith("EXIT")) {
+            try {
+                await this.bot.deleteMessage(callbackQuery.message?.chat.id || 0, this.productMessageId)
+
+                this.keyboardConfig.onCategories(callbackQuery.message as Message);
+            } catch (error) {
+                console.log('Line 125')
+            }
+        }
+
+
+        if (callbackQuery.data?.startsWith("CATEGORY_")) {
+            const type = callbackQuery.data.split("CATEGORY_")[1];
+
+            const products = await this.productService.find({ category: type });
+
+            if (!products) {
+                this.bot.sendMessage(
+                    callbackQuery.message?.chat.id || 0,
+                    "مشکلی رخ داده. لطفا با پشتیبان در ارتباط باشید."
+                );
+                return;
+            }
+
+            try {
+                await this.bot.deleteMessage(
+                    callbackQuery.message?.chat.id || 0,
+                    this.keyboardConfig.categoryMessageId
+                );
+            } catch (err) {
+                console.log("Line 140");
+            }
+
+            const res = await this.bot.sendMessage(
+                callbackQuery.message?.chat.id || 0,
+                "لطفا خدمات مورد نظر خودتون رو انتخاب کنید:",
+                {
+                    reply_markup: {
+                        inline_keyboard: [
+                            ...products.map((product) => [
+                                {
+                                    text: product.title,
+                                    callback_data: `PRODUCT_${product._id}`,
+                                },
+                            ]),
+                            [{ text: "بازگشت ⬅️", callback_data: "EXIT" }],
+                        ],
+                    },
+                }
+            );
+
+            this.productMessageId = res.message_id;
+        }
         return;
     }
 }

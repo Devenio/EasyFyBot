@@ -60,6 +60,8 @@ export class KeyboardConfigurationProvider {
     private readonly userService = new UserService();
     private readonly categoryService = new CategoryService();
 
+    public categoryMessageId = 0;
+
     private layouts: IKeyboardLayout;
     private callbacks: Map<string, Function>;
 
@@ -234,8 +236,6 @@ export class KeyboardConfigurationProvider {
         const categories = await this.categoryService.find({});
         await this.botInstance.deleteMessage(message.chat.id, res.message_id);
 
-        console.log(categories);
-
         if (!categories) {
             this.botInstance.sendMessage(
                 message.chat.id,
@@ -244,7 +244,7 @@ export class KeyboardConfigurationProvider {
             return;
         }
 
-        this.botInstance.sendMessage(
+        const msg = await this.botInstance.sendMessage(
             message.chat.id,
             "لطفا خدمات یا محصول مورد نظر خودتون رو انتخاب کنید:",
             {
@@ -252,12 +252,13 @@ export class KeyboardConfigurationProvider {
                     inline_keyboard: categories.map((category) => [
                         {
                             text: category.title,
-                            callback_data: category.type,
+                            callback_data: `CATEGORY_${category.type}`,
                         },
                     ]),
                 },
             }
         );
+        this.categoryMessageId = msg.message_id;
     }
 
     async onServerStatus(message: Message) {
