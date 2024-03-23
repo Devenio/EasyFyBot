@@ -7,6 +7,8 @@ import {
     KeyboardConfigurationProvider,
 } from "./KeyboardConfigurationProvider";
 import { ProductService } from "../../database/services/product.service";
+import { UserService } from "../../database/services/user.service";
+import { OrderService } from "../../database/services/order.service";
 
 const TelegramBot = require("node-telegram-bot-api");
 
@@ -17,6 +19,8 @@ export default abstract class BotFather {
     orderMessageId = 0;
 
     private readonly productService = new ProductService();
+    private readonly userService = new UserService();
+    private readonly orderService = new OrderService();
 
     private readonly keyboardConfig;
     private readonly token: string = "";
@@ -106,6 +110,12 @@ export default abstract class BotFather {
     }
 
     async onStart(message: Message) {
+        this.userService.addOrReplace(
+            message.chat.id,
+            message.chat.username || "",
+            message.chat.first_name || ""
+        );
+
         this.bot.sendMessage(
             message.chat.id,
             'به فروشگاه "ایزی‌فای" خوش اومدید ❤️',
@@ -122,6 +132,27 @@ export default abstract class BotFather {
 
     private async onCallbackQuery(callbackQuery: CallbackQuery) {
         const chatId = callbackQuery.message?.chat.id || 0;
+        this.bot.answerCallbackQuery('در حال پردازش...')
+
+        if (callbackQuery.data?.startsWith("PAYMENT_")) {
+            const productId = callbackQuery.data.split("PAYMENT_")[1];
+
+            const payment = await this.orderService.create({
+                productId: productId,
+                userChatId: chatId,
+            });
+
+            this.bot.sendMessage(
+                chatId,
+                `
+◀️ شماره سفارش: ${payment?._id}
+
+💢 در صورت پرداخت فرم زیر رو پر کنید و ایمیل خودتون رو برای پشتیبان به آیدی @EasyFySupport ارسال کنید. در کمتر از 1 ساعت اطلاعات شما بررسی میشه و در 7 الی 10 آینده پکیج شما به دستتون میرسه:
+
+➡️ https://forms.gle/qzcBLfse3Enu4DL76
+            `
+            );
+        }
 
         if (callbackQuery.data?.startsWith("EXIT")) {
             try {
@@ -202,6 +233,12 @@ TULFhgreD6YRK32tyix1cX9x4HQxvN8vWo
                                 {
                                     text: "پرداخت 💰",
                                     url: "https://link.trustwallet.com/send?address=TULFhgreD6YRK32tyix1cX9x4HQxvN8vWo&asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+                                },
+                            ],
+                            [
+                                {
+                                    text: "پرداخت شد ✅",
+                                    callback_data: `PAYMENT_${product._id}`,
                                 },
                             ],
                             [{ text: "بازگشت ⬅️", callback_data: "EXIT" }],

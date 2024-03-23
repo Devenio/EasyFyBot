@@ -1,10 +1,12 @@
 import { config } from "dotenv";
 import mongoose from "mongoose";
 import { DATABASE_MODELS } from "../utils/constant";
-import { CategorySchema, CategorySchemaType } from "./schemas/Category";
-import { ProductSchema } from "./schemas/Product";
 import { initCategories } from "./category.init";
 import { initProducts } from "./product.init";
+import { CategorySchema } from "./schemas/Category";
+import { ProductSchema } from "./schemas/Product";
+import { UserSchema } from "./schemas/User";
+import { OrderSchema } from "./schemas/Order";
 
 config();
 
@@ -28,6 +30,8 @@ function setModels() {
         CategorySchema
     );
     const productModel = mongoose.model(DATABASE_MODELS.PRODUCT, ProductSchema);
+    mongoose.model(DATABASE_MODELS.USER, UserSchema);
+    mongoose.model(DATABASE_MODELS.ORDER, OrderSchema);
 
     console.log("> Initializing Database...");
     initCategories.forEach(async (category) => {
