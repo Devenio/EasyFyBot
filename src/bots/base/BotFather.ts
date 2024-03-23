@@ -14,6 +14,7 @@ config();
 
 export default abstract class BotFather {
     productMessageId = 0;
+    orderMessageId = 0;
 
     private readonly productService = new ProductService();
 
@@ -120,16 +121,97 @@ export default abstract class BotFather {
     }
 
     private async onCallbackQuery(callbackQuery: CallbackQuery) {
+        const chatId = callbackQuery.message?.chat.id || 0;
+
         if (callbackQuery.data?.startsWith("EXIT")) {
             try {
-                await this.bot.deleteMessage(callbackQuery.message?.chat.id || 0, this.productMessageId)
+                console.log(this.productMessageId, this.orderMessageId);
+                if (this.productMessageId) {
+                    await this.bot.deleteMessage(
+                        callbackQuery.message?.chat.id || 0,
+                        this.productMessageId
+                    );
 
-                this.keyboardConfig.onCategories(callbackQuery.message as Message);
+                    this.productMessageId = 0;
+                }
+
+                if (this.orderMessageId) {
+                    await this.bot.deleteMessage(chatId, this.orderMessageId);
+
+                    this.orderMessageId = 0;
+                }
+
+                this.keyboardConfig.onCategories(
+                    callbackQuery.message as Message
+                );
             } catch (error) {
-                console.log('Line 125')
+                console.log("Line 143");
             }
         }
 
+        if (callbackQuery.data?.startsWith("PRODUCT_")) {
+            const productId = callbackQuery.data.split("PRODUCT_")[1];
+
+            const product = await this.productService.findById(productId);
+
+            if (!product) {
+                this.bot.sendMessage(
+                    callbackQuery.message?.chat.id || 0,
+                    "مشکلی رخ داده. لطفا با پشتیبان در ارتباط باشید."
+                );
+                return;
+            }
+
+            try {
+                await this.bot.deleteMessage(
+                    callbackQuery.message?.chat.id || 0,
+                    this.productMessageId
+                );
+
+                this.productMessageId = 0;
+            } catch (err) {
+                console.log("Line 140");
+            }
+
+            const orderMessage = await this.bot.sendPhoto(
+                chatId,
+                "src/assets/photo_2024-03-22_16-55-45.jpg",
+                {
+                    caption: `
+✅ پکیج ${product.title}
+⬅️ قیمت: ${product.price} تتر
+
+⬅️ ویژگی های پکیج:
+👈  3 مدرک فیزیکی
+👈  تست و استعلام مدارک
+👈  با چهره و مشخصات خودتان
+👈 کدملی اصلی و  قابل استعلام
+👈 گرافیک و طراحی مطابق با نمونه واقعی
+👈 آموزش و پشتیبانی مادام العمر
+👈 ضمانت بازگشت وجه در صورت عدم وریفای
+
+💢 برای خرید این اکانت هزینه ${product.price} تتر به ولت زیر واریز کنید و پس از پرداخت آدرس ترون اسکن به همراه شماره سفارش خودتون رو به آیدی @EasyFySupport ارسال کنید. 
+
+TULFhgreD6YRK32tyix1cX9x4HQxvN8vWo
+
+❌ پس از ارسال اطلاعات صحت اطلاعات شما تا کمتر از 1 ساعت بررسی شده و در کمتر از 10 روز کاری پروسه وریفای شما انجام شده و مدارک فیزیکی براتون ارسال میشه.
+            `,
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                {
+                                    text: "پرداخت 💰",
+                                    url: "https://link.trustwallet.com/send?address=TULFhgreD6YRK32tyix1cX9x4HQxvN8vWo&asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+                                },
+                            ],
+                            [{ text: "بازگشت ⬅️", callback_data: "EXIT" }],
+                        ],
+                    },
+                }
+            );
+
+            this.orderMessageId = orderMessage.message_id;
+        }
 
         if (callbackQuery.data?.startsWith("CATEGORY_")) {
             const type = callbackQuery.data.split("CATEGORY_")[1];
@@ -149,6 +231,8 @@ export default abstract class BotFather {
                     callbackQuery.message?.chat.id || 0,
                     this.keyboardConfig.categoryMessageId
                 );
+
+                this.keyboardConfig.categoryMessageId = 0;
             } catch (err) {
                 console.log("Line 140");
             }
