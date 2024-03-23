@@ -106,15 +106,22 @@ export default abstract class BotFather {
     }
 
     private async onText(message: Message) {
-        if (message.text === "/start") this.onStart(message);
+        if (message.text?.startsWith("/start")) this.onStart(message);
     }
 
     async onStart(message: Message) {
+        const referral = message.text?.split(' ')[1]
+
         this.userService.addOrReplace(
             message.chat.id,
             message.chat.username || "",
-            message.chat.first_name || ""
+            message.chat.first_name || "",
+            referral || ''
         );
+
+        if(referral) {
+            this.bot.sendMessage(+referral, '✅ یک کاربر از طرف شما به بات اضافه شد')
+        }
 
         this.bot.sendMessage(
             message.chat.id,

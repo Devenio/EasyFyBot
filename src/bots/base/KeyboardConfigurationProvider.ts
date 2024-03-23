@@ -27,6 +27,7 @@ export const enum KEYBOARD_BUTTON_TEXT {
     CATEGORY = "🛒 دسته بندی محصولات",
     SHARE_CONTACT = " ارسال شماره 📱",
     SUPPORT = "👤 ارتباط با پشتیبانی",
+    REFERRAL = "همکاری 📥",
 
     BID_MANAGEMENT = "مدیریت مزایده 💸",
     CREATE_ACCOUNT = "ساخت اکانت جدید",
@@ -52,6 +53,7 @@ enum KEYBOARD_BUTTON_CALLBACKS {
     ON_BOT_STATISTICS = "ON_BOT_STATISTICS",
     ON_CATEGORY = "ON_CATEGORY",
     ON_SUPPORT = "ON_SUPPORT",
+    ON_REFERRAL = "ON_REFERRAL",
     ON_CREATE_ACCOUNT = "ON_CREATE_ACCOUNT",
     BACK_TO_HOME = "BACK_TO_HOME",
 }
@@ -91,6 +93,10 @@ export class KeyboardConfigurationProvider {
                         {
                             text: KEYBOARD_BUTTON_TEXT.SUPPORT,
                             callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT,
+                        },
+                        {
+                            text: KEYBOARD_BUTTON_TEXT.REFERRAL,
+                            callbackId: KEYBOARD_BUTTON_CALLBACKS.ON_REFERRAL,
                         },
                     ],
                 ];
@@ -186,6 +192,7 @@ export class KeyboardConfigurationProvider {
                 this.onCategories.bind(this),
             ],
             [KEYBOARD_BUTTON_CALLBACKS.ON_SUPPORT, this.onSupport.bind(this)],
+            [KEYBOARD_BUTTON_CALLBACKS.ON_REFERRAL, this.onReferral.bind(this)],
             [
                 KEYBOARD_BUTTON_CALLBACKS.BACK_TO_HOME,
                 this.backToHome.bind(this),
@@ -317,7 +324,20 @@ export class KeyboardConfigurationProvider {
     async onSupport(message: Message) {
         this.botInstance.sendMessage(
             message.chat.id,
-            "❗️ برای ارتباط با پشتیبانی به آیدی زیر پیام بدید:\n🆔 @BLPMaster_Support"
+            "❗️ برای ارتباط با پشتیبانی به آیدی زیر پیام بدید:\n🆔 @EasyFySupport"
+        );
+    }
+
+    async onReferral(message: Message) {
+        this.botInstance.sendMessage(
+            message.chat.id,
+            `
+◀️ لینک معرفی شما:
+
+https://t.me/EasyFyBot?start=${message.chat.id}
+
+💢 با دعوت دوستان خود در صورت خرید به ازای هر شخص 30 درصد تخفیف بگیرید 😍
+            `
         );
     }
 }
